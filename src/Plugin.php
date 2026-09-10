@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace Flytedesk\SponsoredContent;
 
+use Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage;
+use Flytedesk\SponsoredContent\Registration\Client as RegistrationClient;
+use Flytedesk\SponsoredContent\Registration\ConfirmationController;
 use Flytedesk\SponsoredContent\Rest\Controller;
 use Flytedesk\SponsoredContent\Seo\FallbackAdapter;
 use Flytedesk\SponsoredContent\Seo\Resolver;
@@ -18,9 +21,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Wires the custom post type, the REST controller, and the SEO adapter
- * stack together. All other classes are self-contained and do not reach
- * back into this one.
+ * Wires the custom post type, the REST controller, the SEO adapter stack,
+ * and the sponsored.flytedesk.com registration flow together. All other
+ * classes are self-contained and do not reach back into this one.
  */
 final class Plugin {
 
@@ -32,6 +35,12 @@ final class Plugin {
 
 	private Controller $controller;
 
+	private RegistrationClient $registration_client;
+
+	private ConfirmationController $registration_confirmation;
+
+	private RegistrationSettingsPage $registration_settings_page;
+
 	public static function instance(): self {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -40,10 +49,45 @@ final class Plugin {
 		return self::$instance;
 	}
 
+	/**
+	 * Runs on plugin activation: seeds the registration option state (token
+	 * + initial "pending" status, generated once and left alone on
+	 * reactivation), flags that an automatic registration attempt should
+	 * run on the next admin page load (deferred - see
+	 * {@see \Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage::maybe_run_automatic_registration()}
+	 * - rather than making a network request inside this activation hook,
+	 * which WordPress expects to run fast and which must not block
+	 * activation on sponsored.flytedesk.com being reachable), and flushes
+	 * rewrite rules so the `/flytedesk-registration-confirmation` route
+	 * {@see ConfirmationController} registers on `init` takes effect
+	 * immediately rather than only after WordPress's own periodic flush.
+	 */
+	public static function activate(): void {
+		Capabilities::register_role();
+
+		$client = new RegistrationClient();
+		$client->ensure_initial_state();
+		update_option( RegistrationClient::OPTION_NEEDS_REGISTRATION, '1' );
+		flush_rewrite_rules();
+	}
+
+	/**
+	 * Cleans up the rewrite rule this plugin added on `init` so
+	 * `/flytedesk-registration-confirmation` stops resolving once the
+	 * plugin is deactivated, rather than 404ing awkwardly through a stale
+	 * compiled rule.
+	 */
+	public static function deactivate(): void {
+		flush_rewrite_rules();
+	}
+
 	private function __construct() {
-		$this->post_type    = new PostType();
-		$this->seo_resolver = new Resolver();
-		$this->controller   = new Controller( $this->seo_resolver );
+		$this->post_type                  = new PostType();
+		$this->seo_resolver               = new Resolver();
+		$this->controller                 = new Controller( $this->seo_resolver );
+		$this->registration_client        = new RegistrationClient();
+		$this->registration_confirmation  = new ConfirmationController( $this->registration_client );
+		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client );
 	}
 
 	/**
@@ -69,6 +113,9 @@ final class Plugin {
 		add_action( 'rest_api_init', array( $this->controller, 'register_routes' ) );
 		add_filter( 'rest_request_after_callbacks', array( $this->controller, 'normalize_error_response' ), 10, 3 );
 		add_action( 'wp_head', array( $this, 'maybe_output_fallback_head_meta' ) );
+
+		$this->registration_confirmation->register();
+		$this->registration_settings_page->register();
 	}
 
 	/**

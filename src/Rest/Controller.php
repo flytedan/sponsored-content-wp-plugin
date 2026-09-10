@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace Flytedesk\SponsoredContent\Rest;
 
+use Flytedesk\SponsoredContent\Capabilities;
 use Flytedesk\SponsoredContent\Markdown\Converter;
 use Flytedesk\SponsoredContent\PostType;
 use Flytedesk\SponsoredContent\Seo\Resolver;
@@ -118,7 +119,16 @@ class Controller {
 			);
 		}
 
-		if ( ! current_user_can( 'edit_posts' ) ) {
+		/*
+		 * `edit_posts` covers the documented manual setup path (a human
+		 * generates their own Application Password from an Author/Editor/
+		 * Administrator account). Capabilities::MANAGE_SPONSORED_CONTENT
+		 * covers the automatically-provisioned "flytebot" user, which holds
+		 * only that one narrow capability and nothing else - either is
+		 * sufficient, since both represent "this user is meant to manage
+		 * sponsored content", just via different setup paths.
+		 */
+		if ( ! current_user_can( 'edit_posts' ) && ! current_user_can( Capabilities::MANAGE_SPONSORED_CONTENT ) ) {
 			return new WP_Error(
 				'unauthorized',
 				__( 'The authenticated user does not have permission to manage sponsored content.', 'flytedesk-sponsored-content' ),

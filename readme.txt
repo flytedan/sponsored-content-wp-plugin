@@ -21,7 +21,7 @@ The plugin's core job is making sure SEO metadata (title, description, keywords,
 * All in One SEO (AIOSEO)
 * No SEO plugin at all (a built-in fallback writes its own meta and renders `<meta name="description">` / Open Graph tags directly)
 
-Authentication uses WordPress Application Passwords (built into WordPress core since 5.6) - no custom API keys, no extra plugin required.
+Authentication uses WordPress Application Passwords (built into WordPress core since 5.6) - no custom API keys, no extra plugin required. On activation, the plugin automatically registers this site with sponsored.flytedesk.com, provisioning a dedicated low-privilege "flytebot" user and Application Password so a human never has to generate and hand over credentials manually. See the **Registration** page under **Sponsored Content** in wp-admin for status (Pending / Registration Sent / Accepted / Rejected) and a manual retry button.
 
 = Endpoints =
 
@@ -37,9 +37,9 @@ See README.md in the plugin directory for the full field reference and curl exam
 1. Upload the `sponsored-content-wp-plugin` directory to `/wp-content/plugins/`.
 2. From the plugin directory on the server, run `composer install --no-dev` to install its runtime dependencies (there are none beyond the autoloader itself, but this step generates `vendor/autoload.php`, which the plugin requires to boot).
 3. Activate the plugin through the "Plugins" screen in WordPress. WordPress itself will refuse activation with an explanatory notice if the site doesn't meet the "Requires at least" / "Requires PHP" versions declared above.
-4. Create (or reuse) a WordPress user with the `edit_posts` capability (Author role or higher) for flytedesk to authenticate as.
-5. On that user's profile page, scroll to "Application Passwords" and generate a new one named "flytedesk".
-6. Give flytedesk the site's REST API base URL, the WordPress username, and the generated application password.
+4. That's it - the plugin automatically registers this site with sponsored.flytedesk.com and provisions its own credentials. Visit **Sponsored Content → Registration** in wp-admin to check status or manually (re-)send the registration request.
+
+Alternatively, to authenticate as a different, human-managed WordPress account instead of the automatically-provisioned one (see README.md's "Generating a WordPress Application Password" section for full manual steps): create a user with the `edit_posts` capability, generate an Application Password from their profile page, and give flytedesk the site's REST API base URL, that username, and the generated password.
 
 == Frequently Asked Questions ==
 

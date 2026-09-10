@@ -59,4 +59,7 @@ if ( ! file_exists( FLYTEDESK_SPONSORED_CONTENT_DIR . 'vendor/autoload.php' ) ) 
 
 require_once FLYTEDESK_SPONSORED_CONTENT_DIR . 'vendor/autoload.php';
 
+register_activation_hook( __FILE__, array( Plugin::class, 'activate' ) );
+register_deactivation_hook( __FILE__, array( Plugin::class, 'deactivate' ) );
+
 Plugin::instance()->boot();

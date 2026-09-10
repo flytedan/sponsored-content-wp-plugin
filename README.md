@@ -5,12 +5,21 @@ A standalone WordPress plugin that lets the flytedesk platform push sponsored/na
 ## Architecture overview
 
 ```
-sponsored-content-wp-plugin.php   Plugin header + Composer autoload + Plugin::instance()->boot()
+sponsored-content-wp-plugin.php   Plugin header + Composer autoload + activation/deactivation hooks + Plugin::instance()->boot()
 src/
-├── Plugin.php                    Orchestrator: wires PostType + Rest\Controller + Seo\Resolver to WP hooks
+├── Plugin.php                    Orchestrator: wires everything below to WP hooks; owns activate()/deactivate()
+├── Capabilities.php              The flytedesk_manage_sponsored_content capability + flytedesk_api role
 ├── PostType.php                  Registers the fdsc_sponsored_post CPT
 ├── Rest/Controller.php           flytedesk/v1 REST routes, request validation/sanitization, error envelope
 ├── Markdown/Converter.php        Dependency-free markdown -> HTML converter
+├── Admin/
+│   └── RegistrationSettingsPage.php   wp-admin page showing registration status + manual retry button
+├── Registration/
+│   ├── Client.php                     POSTs registration to sponsored.flytedesk.com, tracks status
+│   ├── ConfirmationController.php     Handles the inbound /flytedesk-registration-confirmation webhook
+│   ├── ApiCredential.php              Provisions the "flytebot" user + issues its Application Password
+│   ├── ApplicationPasswordIssuer.php  Narrow interface over WP_Application_Passwords (for testability)
+│   └── WordPressApplicationPasswordIssuer.php   Concrete implementation, backed by WP core
 └── Seo/
     ├── AdapterInterface.php      is_active() / write() / read() contract every adapter implements
     ├── AbstractMetaAdapter.php   Shared post-meta read/write traversal driven by each adapter's field_map()
@@ -26,6 +35,34 @@ src/
 **Why does `AbstractMetaAdapter` exist?** The Yoast/Rank Math/AIOSEO/Fallback adapters all do the literal same thing - read/write a fixed set of SEO fields against a handful of `post_meta` keys, sanitizing on the way in. Only the key names (and, for Yoast's single-phrase focus keyword, a value transform) differ. `AbstractMetaAdapter` owns that read/write traversal once, driven by each concrete adapter's `field_map()`; this is the fix for the duplication present in every field across every adapter in the plugin's original single-file, non-namespaced draft.
 
 **Why no vendored Markdown library?** flytedesk only ever sends a fixed, known subset of Markdown for article bodies (headings, paragraphs, emphasis, links/images, lists, blockquotes, code, horizontal rules) - not arbitrary user-authored Markdown. A ~250-line dependency-free converter covers that subset completely without pulling in a full CommonMark implementation's transitive footprint. It is a formatting convenience only, never the security boundary: `Rest\Controller` always re-sanitizes its output with `wp_kses_post()` before storage.
+
+## Registration with sponsored.flytedesk.com
+
+Beyond the REST API itself, the plugin automates onboarding a new publisher site with flytedesk's platform, so a human never has to manually generate and hand over an Application Password. The flow:
+
+1. **On activation**, the plugin generates a random verification token (`Registration\Client`, 256 bits of entropy, persisted for the life of the install) and flags that a registration attempt should run on the next admin page load - deferred rather than done inside the activation hook itself, since WordPress expects activation to be fast and must not block on sponsored.flytedesk.com being reachable.
+2. **On that next admin page load**, `Registration\Client::register()` runs: it provisions (or reuses) a dedicated, low-privilege WordPress user named `flytebot` (see "The flytebot user" below), issues it a fresh Application Password, and `POST`s everything to `https://sponsored.flytedesk.com/wp-plugin-register`:
+   ```json
+   {
+     "site_title": "...",
+     "site_domain": "publisher-site.com",
+     "verification_token": "<64 hex chars>",
+     "api_username": "flytebot",
+     "api_key": "<the just-issued Application Password, plaintext>"
+   }
+   ```
+   Status becomes **Registration Sent** only on an HTTP `200` response from that endpoint; anything else (network failure, non-200, or failing to provision the credential) leaves status unchanged and records the failure as "Last error" on the settings page.
+3. **A human at flytedesk reviews the registration** and either accepts or rejects it.
+4. **sponsored.flytedesk.com confirms the decision** by `POST`ing to `https://{site_domain}/flytedesk-registration-confirmation` with `{"status": "Accepted"}` or `{"status": "Rejected"}`, authenticated via `Authorization: Bearer <the same verification_token from step 2>`. `Registration\ConfirmationController` verifies that token with `hash_equals()` before updating status - **this header is not part of the literal spec's JSON body, and is required**; without it, this endpoint would let anyone who knows a site's domain flip its registration status. `sponsored.flytedesk.com` already has the token from step 2, so sending it back costs nothing on that end.
+5. **Once accepted**, flytedesk's platform uses the `api_username`/`api_key` from step 2 to start calling this plugin's own REST API (the routes documented below) immediately - no further manual credential handoff.
+
+A **Registration** page under **Sponsored Content** in wp-admin shows the current status (Pending / Registration Sent / Accepted / Rejected), the site domain, verification token, and flytebot username, plus a **Register Now** / **Re-register** button to (re-)send the registration request on demand - useful after a rejection, or to retry following a transient failure.
+
+### The flytebot user
+
+`Registration\ApiCredential` provisions a single WordPress user, `flytebot`, holding only the `flytedesk_manage_sponsored_content` capability (plus the baseline `read`) via a dedicated `flytedesk_api` role - not `edit_posts` or any other WordPress core capability. This means flytebot can authenticate against *this plugin's* REST routes and nothing else: it cannot log into wp-admin to edit other content, upload media, or use WordPress core's own REST API (`/wp/v2/posts`, etc.). `Rest\Controller::check_permission()` accepts either `edit_posts` (the documented manual-setup path below, for a human-managed Application Password from an Author/Editor/Administrator account) or `flytedesk_manage_sponsored_content` - either is sufficient.
+
+Every time a registration attempt runs (automatic or via "Re-register"), a **fresh** Application Password is issued for flytebot and the previously-issued one is revoked. WordPress only ever shows an Application Password's plaintext once, at creation - there's no way to retrieve a previously-issued one later, which is exactly why the plugin reissues rather than trying to cache and resend the same value.
 
 ## Local development setup
 
@@ -69,7 +106,9 @@ To tear the environment down: `npx wp-env destroy`.
 composer run test   # unit, then integration (requires wp-env to already be running for integration)
 ```
 
-## Generating a WordPress Application Password
+## Generating a WordPress Application Password (manual alternative)
+
+The registration flow above handles this automatically via the `flytebot` user - this section only matters if you want to authenticate as a different, human-managed account instead (e.g. for manual testing, or a site that opts out of the registration flow entirely).
 
 Flytedesk authenticates using [WordPress Application Passwords](https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/), a core feature since WordPress 5.6. No custom API-key system is used.
 
