@@ -1,0 +1,21 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# wp-env
+/.wp-env/
+/.wp-env.override.json
+
+# Test / lint artefacts
+/.phpunit.cache/
+.phpunit.result.cache
+/tests/coverage/
+
+# Logs
+*.log
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: PHPCS (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist
+
+      - name: Lint PHP syntax
+        run: |
+          find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l sponsored-content-wp-plugin.php
+
+      - name: Run PHPCS
+        run: composer run lint
+
+  unit:
+    name: PHPUnit unit suite (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist
+
+      - name: Run unit tests (Brain Monkey - no WordPress install required)
+        run: composer run test:unit
+
+  integration:
+    name: PHPUnit integration suite (wp-env)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+          tools: composer
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Start the wp-env test environment
+        run: npx --yes @wordpress/env start
+
+      - name: Run integration tests against wp-env
+        run: npx --yes wp-env run tests-cli --env-cwd=wp-content/plugins/sponsored-content-wp-plugin composer run test:integration
+
+      - name: Show wp-env logs on failure
+        if: failure()
+        run: npx --yes wp-env logs
