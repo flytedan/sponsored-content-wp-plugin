@@ -7,8 +7,10 @@ declare( strict_types=1 );
 
 namespace Flytedesk\SponsoredContent\Tests\Integration;
 
+use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
 use Flytedesk\SponsoredContent\Registration\ConfirmationController;
+use Flytedesk\SponsoredContent\Registration\StatePresenter;
 use WP_UnitTestCase;
 
 /**
@@ -86,5 +88,39 @@ final class RegistrationTest extends WP_UnitTestCase {
 			'index.php?flytedesk_registration_confirmation=1',
 			$wp_rewrite->extra_rules_top['^flytedesk-registration-confirmation/?$']
 		);
+	}
+
+	/**
+	 * Confirms `StatePresenter::format_timestamp()` produces a real,
+	 * site-formatted string via WordPress's own `mysql2date()` - the unit
+	 * suite mocks that function entirely, so this is the only place that
+	 * proves the site's actual `date_format`/`time_format` options feed
+	 * through correctly end to end.
+	 */
+	public function test_state_presenter_formats_real_timestamps_using_site_date_time_format(): void {
+		$client = new Client();
+		$client->ensure_initial_state();
+
+		$state = ( new StatePresenter( $client, new ApiCredential() ) )->to_array();
+
+		$this->assertNotSame( '', $state['timeline']['created_at'] );
+		$this->assertSame(
+			mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $client->get_created_at(), false ),
+			$state['timeline']['created_at']
+		);
+		$this->assertSame( '', $state['timeline']['sent_at'] );
+		$this->assertSame( '', $state['timeline']['resolved_at'] );
+	}
+
+	/**
+	 * The two `wp_ajax_*` hooks are what let the Registration page's
+	 * JavaScript poll and (re-)register without a full page reload -
+	 * confirms `Plugin::boot()` actually wires
+	 * {@see \Flytedesk\SponsoredContent\Admin\RegistrationAjaxController}
+	 * up to them.
+	 */
+	public function test_ajax_actions_are_registered(): void {
+		$this->assertNotFalse( has_action( 'wp_ajax_flytedesk_registration_status' ) );
+		$this->assertNotFalse( has_action( 'wp_ajax_flytedesk_register' ) );
 	}
 }

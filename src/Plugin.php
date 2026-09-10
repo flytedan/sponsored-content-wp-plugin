@@ -9,9 +9,12 @@ declare( strict_types=1 );
 
 namespace Flytedesk\SponsoredContent;
 
+use Flytedesk\SponsoredContent\Admin\RegistrationAjaxController;
 use Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage;
+use Flytedesk\SponsoredContent\Registration\ApiCredential as RegistrationApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client as RegistrationClient;
 use Flytedesk\SponsoredContent\Registration\ConfirmationController;
+use Flytedesk\SponsoredContent\Registration\StatePresenter;
 use Flytedesk\SponsoredContent\Rest\Controller;
 use Flytedesk\SponsoredContent\Seo\FallbackAdapter;
 use Flytedesk\SponsoredContent\Seo\Resolver;
@@ -40,6 +43,8 @@ final class Plugin {
 	private ConfirmationController $registration_confirmation;
 
 	private RegistrationSettingsPage $registration_settings_page;
+
+	private RegistrationAjaxController $registration_ajax;
 
 	public static function instance(): self {
 		if ( null === self::$instance ) {
@@ -82,12 +87,16 @@ final class Plugin {
 	}
 
 	private function __construct() {
-		$this->post_type                  = new PostType();
-		$this->seo_resolver               = new Resolver();
-		$this->controller                 = new Controller( $this->seo_resolver );
-		$this->registration_client        = new RegistrationClient();
-		$this->registration_confirmation  = new ConfirmationController( $this->registration_client );
-		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client );
+		$this->post_type                 = new PostType();
+		$this->seo_resolver              = new Resolver();
+		$this->controller                = new Controller( $this->seo_resolver );
+		$this->registration_client       = new RegistrationClient();
+		$this->registration_confirmation = new ConfirmationController( $this->registration_client );
+
+		$registration_api_credential      = new RegistrationApiCredential();
+		$registration_state_presenter     = new StatePresenter( $this->registration_client, $registration_api_credential );
+		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client, $registration_api_credential, $registration_state_presenter );
+		$this->registration_ajax          = new RegistrationAjaxController( $this->registration_client, $registration_state_presenter );
 	}
 
 	/**
@@ -116,6 +125,7 @@ final class Plugin {
 
 		$this->registration_confirmation->register();
 		$this->registration_settings_page->register();
+		$this->registration_ajax->register();
 	}
 
 	/**

@@ -117,7 +117,7 @@ class ConfirmationController {
 			return $this->error_result( 400, 'invalid_status', __( 'status must be "Accepted" or "Rejected".', 'flytedesk-sponsored-content' ) );
 		}
 
-		$this->client->set_status( $status_map[ $requested_status ] );
+		$this->client->mark_resolved( $status_map[ $requested_status ] );
 
 		return array(
 			'status' => 200,

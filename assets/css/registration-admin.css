@@ -1,0 +1,617 @@
+/* Flytedesk Sponsored Content — Registration page */
+
+.flytedesk-registration-page {
+	--fd-navy: #0f2a47;
+	--fd-navy-light: #1c3f63;
+	--fd-blue: #2f7dc4;
+	--fd-blue-light: #7cc0ea;
+	--fd-success: #1a9c6d;
+	--fd-success-bg: #e7f7f1;
+	--fd-warning: #b8710a;
+	--fd-warning-bg: #fdf3e2;
+	--fd-danger: #c9403f;
+	--fd-danger-bg: #fbebea;
+	--fd-info-bg: #eaf3fb;
+	--fd-gray-bg: #f6f7f9;
+	--fd-border: #e1e5ea;
+	--fd-text: #1d2327;
+	--fd-text-muted: #6b7280;
+	--fd-radius: 8px;
+	max-width: 900px;
+	margin-left: 0;
+}
+
+.flytedesk-registration-page * {
+	box-sizing: border-box;
+}
+
+/*
+ * A handful of elements below (poll indicator, HTTP status pill) set their
+ * own `display` unconditionally, e.g. `display: inline-flex`. That rule and
+ * the browser's default `[hidden] { display: none }` UA-stylesheet rule
+ * have equal specificity, so whichever comes later in the cascade wins -
+ * without this, JavaScript setting `.hidden = true` on such an element
+ * would silently fail to actually hide it. This blanket override, scoped to
+ * this page only, guarantees `hidden` always wins here regardless of what
+ * else a given selector declares.
+ */
+.flytedesk-registration-page [hidden] {
+	display: none !important;
+}
+
+/* ---------- Header ---------- */
+
+.flytedesk-header {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	background: linear-gradient(135deg, var(--fd-navy) 0%, var(--fd-navy-light) 100%);
+	border-radius: var(--fd-radius);
+	padding: 28px 32px;
+	margin: 20px 0 24px;
+	box-shadow: 0 1px 3px rgba(15, 42, 71, 0.25);
+}
+
+.flytedesk-header-logo {
+	height: 34px;
+	width: auto;
+	display: block;
+	flex-shrink: 0;
+}
+
+.flytedesk-header-text h1 {
+	color: #fff;
+	font-size: 20px;
+	font-weight: 600;
+	margin: 0 0 4px;
+	padding: 0;
+	line-height: 1.3;
+}
+
+.flytedesk-header-text p {
+	color: rgba(255, 255, 255, 0.75);
+	font-size: 13px;
+	margin: 0;
+}
+
+/* ---------- Timeline ---------- */
+
+.flytedesk-timeline {
+	display: flex;
+	align-items: flex-start;
+	background: #fff;
+	border: 1px solid var(--fd-border);
+	border-radius: var(--fd-radius);
+	padding: 28px 32px 24px;
+	margin-bottom: 24px;
+}
+
+.flytedesk-timeline-step {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	flex: 1;
+	min-width: 0;
+}
+
+.flytedesk-timeline-connector {
+	flex: 0 0 auto;
+	width: 100%;
+	max-width: 120px;
+	height: 2px;
+	background: var(--fd-border);
+	margin-top: 17px;
+	position: relative;
+	top: 0;
+	transition: background-color 0.25s ease;
+}
+
+.flytedesk-timeline-connector.is-complete {
+	background: var(--fd-success);
+}
+
+.flytedesk-timeline-icon {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--fd-gray-bg);
+	border: 2px solid var(--fd-border);
+	color: var(--fd-text-muted);
+	font-size: 15px;
+	font-weight: 600;
+	transition: all 0.25s ease;
+	margin-bottom: 10px;
+}
+
+.flytedesk-timeline-step.is-active .flytedesk-timeline-icon {
+	background: var(--fd-info-bg);
+	border-color: var(--fd-blue);
+	color: var(--fd-blue);
+	box-shadow: 0 0 0 4px rgba(47, 125, 196, 0.12);
+}
+
+.flytedesk-timeline-step.is-complete .flytedesk-timeline-icon {
+	background: var(--fd-success);
+	border-color: var(--fd-success);
+	color: #fff;
+}
+
+.flytedesk-timeline-step.is-rejected .flytedesk-timeline-icon {
+	background: var(--fd-danger);
+	border-color: var(--fd-danger);
+	color: #fff;
+}
+
+.flytedesk-timeline-step.is-active .flytedesk-timeline-icon {
+	animation: flytedesk-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes flytedesk-pulse {
+	0%, 100% { box-shadow: 0 0 0 4px rgba(47, 125, 196, 0.12); }
+	50% { box-shadow: 0 0 0 7px rgba(47, 125, 196, 0.06); }
+}
+
+.flytedesk-timeline-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--fd-text);
+	margin-bottom: 3px;
+}
+
+.flytedesk-timeline-step.is-upcoming .flytedesk-timeline-label {
+	color: var(--fd-text-muted);
+	font-weight: 500;
+}
+
+.flytedesk-timeline-timestamp {
+	font-size: 11.5px;
+	color: var(--fd-text-muted);
+	min-height: 15px;
+}
+
+/* ---------- Tabs ---------- */
+
+.flytedesk-tabs {
+	background: #fff;
+	border: 1px solid var(--fd-border);
+	border-radius: var(--fd-radius);
+	overflow: hidden;
+}
+
+.flytedesk-tab-nav {
+	display: flex;
+	border-bottom: 1px solid var(--fd-border);
+	background: var(--fd-gray-bg);
+	padding: 0 12px;
+}
+
+.flytedesk-tab-button {
+	appearance: none;
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	padding: 14px 16px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--fd-text-muted);
+	cursor: pointer;
+	transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.flytedesk-tab-button:hover {
+	color: var(--fd-navy);
+}
+
+.flytedesk-tab-button.is-active {
+	color: var(--fd-blue);
+	border-bottom-color: var(--fd-blue);
+}
+
+.flytedesk-tab-button:focus-visible {
+	outline: 2px solid var(--fd-blue);
+	outline-offset: -2px;
+}
+
+.flytedesk-tab-panel {
+	padding: 28px 32px;
+}
+
+/* ---------- Status panel ---------- */
+
+.flytedesk-status-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 12px;
+	border-radius: 999px;
+	font-size: 12.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+
+.flytedesk-status-badge.is-pending { background: var(--fd-warning-bg); color: var(--fd-warning); }
+.flytedesk-status-badge.is-sent { background: var(--fd-info-bg); color: var(--fd-blue); }
+.flytedesk-status-badge.is-accepted { background: var(--fd-success-bg); color: var(--fd-success); }
+.flytedesk-status-badge.is-rejected { background: var(--fd-danger-bg); color: var(--fd-danger); }
+
+.flytedesk-status-badge-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.flytedesk-status-badge.is-sent .flytedesk-status-badge-dot {
+	animation: flytedesk-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes flytedesk-blink {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.3; }
+}
+
+.flytedesk-field-grid {
+	display: grid;
+	grid-template-columns: 160px 1fr;
+	row-gap: 14px;
+	column-gap: 16px;
+	margin: 22px 0;
+	font-size: 13px;
+}
+
+.flytedesk-field-label {
+	color: var(--fd-text-muted);
+	font-weight: 600;
+	padding-top: 2px;
+}
+
+.flytedesk-field-value code {
+	background: var(--fd-gray-bg);
+	border: 1px solid var(--fd-border);
+	border-radius: 4px;
+	padding: 2px 7px;
+	font-size: 12px;
+	word-break: break-all;
+}
+
+.flytedesk-field-description {
+	margin: 6px 0 0;
+	color: var(--fd-text-muted);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.flytedesk-notice {
+	border-radius: 6px;
+	padding: 12px 16px;
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 0 0 20px;
+}
+
+.flytedesk-notice.is-error { background: var(--fd-danger-bg); color: var(--fd-danger); }
+.flytedesk-notice.is-success { background: var(--fd-success-bg); color: var(--fd-success); }
+.flytedesk-notice.is-info { background: var(--fd-info-bg); color: var(--fd-navy); }
+
+.flytedesk-button {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	background: var(--fd-blue);
+	color: #fff;
+	border: none;
+	border-radius: 6px;
+	padding: 10px 20px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.flytedesk-button:hover:not(:disabled) {
+	background: #2669a6;
+}
+
+.flytedesk-button:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}
+
+.flytedesk-spinner {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.4);
+	border-top-color: #fff;
+	animation: flytedesk-spin 0.7s linear infinite;
+	display: none;
+	flex-shrink: 0;
+}
+
+.flytedesk-button.is-loading .flytedesk-spinner {
+	display: inline-block;
+}
+
+@keyframes flytedesk-spin {
+	to { transform: rotate(360deg); }
+}
+
+.flytedesk-poll-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11.5px;
+	color: var(--fd-text-muted);
+	margin-top: 18px;
+}
+
+.flytedesk-poll-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--fd-blue-light);
+	animation: flytedesk-blink 1.6s ease-in-out infinite;
+}
+
+/* ---------- Technical details ---------- */
+
+.flytedesk-tech-block {
+	margin-bottom: 22px;
+}
+
+.flytedesk-tech-block:last-child {
+	margin-bottom: 0;
+}
+
+.flytedesk-tech-block h3 {
+	font-size: 12.5px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: var(--fd-text-muted);
+	margin: 0 0 8px;
+}
+
+.flytedesk-tech-http-status {
+	display: inline-block;
+	font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+	font-size: 12px;
+	font-weight: 700;
+	padding: 2px 8px;
+	border-radius: 4px;
+	margin-left: 8px;
+}
+
+.flytedesk-tech-http-status.is-2xx { background: var(--fd-success-bg); color: var(--fd-success); }
+.flytedesk-tech-http-status.is-4xx,
+.flytedesk-tech-http-status.is-5xx,
+.flytedesk-tech-http-status.is-0 { background: var(--fd-danger-bg); color: var(--fd-danger); }
+
+.flytedesk-code-block {
+	background: var(--fd-navy);
+	color: #d7e6f5;
+	border-radius: 6px;
+	padding: 14px 16px;
+	font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	overflow: auto;
+	max-height: 220px;
+	white-space: pre-wrap;
+	word-break: break-word;
+	margin: 0;
+}
+
+.flytedesk-code-block.is-empty {
+	background: var(--fd-gray-bg);
+	color: var(--fd-text-muted);
+	font-family: inherit;
+	font-style: italic;
+	max-height: none;
+}
+
+.flytedesk-code-block .flytedesk-code-muted {
+	color: #7c96b3;
+}
+
+.flytedesk-empty-state {
+	color: var(--fd-text-muted);
+	font-size: 13px;
+	font-style: italic;
+}
+
+/* ---------- About / FAQ ---------- */
+
+.flytedesk-about-intro {
+	font-size: 13.5px;
+	line-height: 1.7;
+	color: var(--fd-text);
+	margin: 0 0 24px;
+}
+
+.flytedesk-about-stats {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 12px;
+	margin-bottom: 28px;
+}
+
+.flytedesk-about-stat {
+	background: var(--fd-gray-bg);
+	border: 1px solid var(--fd-border);
+	border-radius: 6px;
+	padding: 14px 10px;
+	text-align: center;
+}
+
+.flytedesk-about-stat strong {
+	display: block;
+	font-size: 19px;
+	color: var(--fd-navy);
+	margin-bottom: 2px;
+}
+
+.flytedesk-about-stat span {
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: var(--fd-text-muted);
+}
+
+.flytedesk-about-section-title {
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--fd-navy);
+	margin: 0 0 12px;
+}
+
+.flytedesk-faq {
+	border: 1px solid var(--fd-border);
+	border-radius: 6px;
+	overflow: hidden;
+	margin-bottom: 28px;
+}
+
+.flytedesk-faq details {
+	border-bottom: 1px solid var(--fd-border);
+}
+
+.flytedesk-faq details:last-child {
+	border-bottom: none;
+}
+
+.flytedesk-faq summary {
+	list-style: none;
+	cursor: pointer;
+	padding: 14px 16px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--fd-text);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.flytedesk-faq summary::-webkit-details-marker {
+	display: none;
+}
+
+.flytedesk-faq summary::after {
+	content: "+";
+	font-size: 17px;
+	font-weight: 400;
+	color: var(--fd-text-muted);
+	flex-shrink: 0;
+	transition: transform 0.15s ease;
+}
+
+.flytedesk-faq details[open] summary::after {
+	transform: rotate(45deg);
+}
+
+.flytedesk-faq summary:hover {
+	background: var(--fd-gray-bg);
+}
+
+.flytedesk-faq-answer {
+	padding: 0 16px 16px;
+	font-size: 13px;
+	line-height: 1.65;
+	color: var(--fd-text-muted);
+}
+
+.flytedesk-how-it-works {
+	counter-reset: flytedesk-step;
+	display: grid;
+	gap: 14px;
+	margin-bottom: 8px;
+}
+
+.flytedesk-how-it-works li {
+	counter-increment: flytedesk-step;
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+	list-style: none;
+	font-size: 13px;
+	line-height: 1.6;
+	color: var(--fd-text);
+}
+
+.flytedesk-how-it-works li::before {
+	content: counter(flytedesk-step);
+	flex-shrink: 0;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: var(--fd-navy);
+	color: #fff;
+	font-size: 11.5px;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 1px;
+}
+
+.flytedesk-how-it-works strong {
+	display: block;
+	margin-bottom: 2px;
+	color: var(--fd-navy);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 782px) {
+	.flytedesk-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 14px;
+	}
+
+	.flytedesk-timeline {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 4px;
+	}
+
+	.flytedesk-timeline-connector {
+		width: 2px;
+		max-width: none;
+		height: 20px;
+		margin: 0 0 0 17px;
+	}
+
+	.flytedesk-timeline-step {
+		flex-direction: row;
+		text-align: left;
+		gap: 12px;
+	}
+
+	.flytedesk-timeline-icon {
+		margin-bottom: 0;
+	}
+
+	.flytedesk-field-grid {
+		grid-template-columns: 1fr;
+		row-gap: 4px;
+	}
+
+	.flytedesk-field-label {
+		padding-top: 0;
+	}
+
+	.flytedesk-about-stats {
+		grid-template-columns: repeat(2, 1fr);
+	}
+
+	.flytedesk-tab-nav {
+		overflow-x: auto;
+	}
+}

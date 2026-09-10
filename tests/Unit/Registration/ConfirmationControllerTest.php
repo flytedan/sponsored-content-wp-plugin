@@ -82,7 +82,9 @@ final class ConfirmationControllerTest extends BrainMonkeyTestCase {
 
 	public function test_handle_accepts_valid_accepted_status_and_updates_client(): void {
 		Functions\when( 'get_option' )->justReturn( self::TOKEN );
+		Functions\when( 'current_time' )->justReturn( '2026-09-10 12:00:00' );
 		Functions\expect( 'update_option' )->once()->with( Client::OPTION_STATUS, Client::STATUS_ACCEPTED );
+		Functions\expect( 'update_option' )->once()->with( Client::OPTION_RESOLVED_AT, '2026-09-10 12:00:00' );
 
 		$controller = new ConfirmationController( new Client() );
 		$result     = $controller->handle( 'POST', self::TOKEN, '{"status":"Accepted"}' );
@@ -93,7 +95,9 @@ final class ConfirmationControllerTest extends BrainMonkeyTestCase {
 
 	public function test_handle_accepts_valid_rejected_status_and_updates_client(): void {
 		Functions\when( 'get_option' )->justReturn( self::TOKEN );
+		Functions\when( 'current_time' )->justReturn( '2026-09-10 12:00:00' );
 		Functions\expect( 'update_option' )->once()->with( Client::OPTION_STATUS, Client::STATUS_REJECTED );
+		Functions\expect( 'update_option' )->once()->with( Client::OPTION_RESOLVED_AT, '2026-09-10 12:00:00' );
 
 		$controller = new ConfirmationController( new Client() );
 		$result     = $controller->handle( 'POST', self::TOKEN, '{"status":"Rejected"}' );
