@@ -48,7 +48,33 @@ class Client {
 	public const OPTION_LAST_RESPONSE_BODY = 'flytedesk_registration_last_response_body';
 	public const OPTION_NEEDS_REGISTRATION = 'flytedesk_needs_registration';
 
-	private const REGISTER_ENDPOINT = 'https://sponsored.flytedesk.com/wp-plugin-register';
+	/**
+	 * The documented contract names this endpoint as
+	 * `sponsored.flytedesk.com/functions/v1/wp-plugin-register`, but that
+	 * host only serves the marketing site (a static Netlify-hosted SPA) -
+	 * confirmed by curl (a 404 from Netlify's own function router, not the
+	 * SPA's catch-all) and by grepping the deployed frontend bundle, which
+	 * calls every one of its own backend functions against
+	 * `porvdidjoviqtbsmvhfo.supabase.co/functions/v1/*`, a Supabase project
+	 * on a completely different domain. Verified live via curl on
+	 * 2026-09-11 (`{"status":"ok"}`, HTTP 200, no auth header required).
+	 *
+	 * A `api.sponsored.flytedesk.com` custom domain (CloudFront in front of
+	 * this same Supabase origin, avoiding Supabase's paid custom-domain
+	 * add-on) exists and is fully configured - ACM cert, CloudFront
+	 * distribution, Route53 record - but is not usable yet: Supabase's
+	 * origin is fronted by Cloudflare, which appears to block or reset
+	 * connections from AWS's IP ranges at the network level (CloudFront
+	 * gets its own connection-failure 502, not a passed-through origin
+	 * response, and this persists with a browser-realistic User-Agent, so
+	 * it isn't simple header-based bot detection). Fixing that needs
+	 * someone with access to the Supabase/Cloudflare dashboard to
+	 * allow-list CloudFront's ranges. Until then, this raw Supabase URL is
+	 * the one actually in use - point back at the custom domain once it's
+	 * confirmed working (see git history around 2026-09-11 for the full
+	 * diagnostic trail).
+	 */
+	private const REGISTER_ENDPOINT = 'https://porvdidjoviqtbsmvhfo.supabase.co/functions/v1/wp-plugin-register';
 
 	/**
 	 * Response bodies are stored for display only, never parsed - capped so
