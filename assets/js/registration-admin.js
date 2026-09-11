@@ -30,7 +30,7 @@
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initTabs();
 		renderState( config.initialState );
-		maybeStartPolling( config.initialState.status );
+		maybeStartPolling( config.initialState );
 
 		if ( els.registerButton ) {
 			els.registerButton.addEventListener( 'click', onRegisterClick );
@@ -84,10 +84,27 @@
 			} );
 	}
 
-	function maybeStartPolling( status ) {
+	/**
+	 * Rejected is truly terminal - nothing flytedesk's platform does
+	 * afterward can change it, so polling can stop for good. Accepted is
+	 * NOT terminal on its own: flytedesk can still go on to actually create/
+	 * update/delete content against this site, and the Verified step only
+	 * lights up once that happens - so polling must keep running past
+	 * Accepted until verification is complete too, or the page would never
+	 * pick up that later activity without a manual reload.
+	 */
+	function isFullyResolved( state ) {
+		if ( 'rejected' === state.status ) {
+			return true;
+		}
+
+		return 'accepted' === state.status && !! ( state.verification && state.verification.all_verified );
+	}
+
+	function maybeStartPolling( state ) {
 		stopPolling();
 
-		if ( 'accepted' === status || 'rejected' === status ) {
+		if ( isFullyResolved( state ) ) {
 			return;
 		}
 
@@ -99,7 +116,7 @@
 			fetchState( 'flytedesk_registration_status' )
 				.then( function ( state ) {
 					renderState( state );
-					if ( 'accepted' === state.status || 'rejected' === state.status ) {
+					if ( isFullyResolved( state ) ) {
 						stopPolling();
 					}
 				} )
@@ -129,7 +146,7 @@
 		fetchState( 'flytedesk_register' )
 			.then( function ( state ) {
 				renderState( state );
-				maybeStartPolling( state.status );
+				maybeStartPolling( state );
 			} )
 			.catch( function ( error ) {
 				renderNotice( els.statusPanel, 'error', error.message || config.strings.genericError );
@@ -173,12 +190,14 @@
 			} else if ( index === currentIndex ) {
 				if ( 'rejected' === state.status && RESOLVED_STEP_INDEX === index ) {
 					step.classList.add( 'is-rejected' );
-				} else if ( VERIFIED_STEP_INDEX === index ) {
-					// Verified is the true end of the pipeline - nothing further
-					// ever happens after it, so it reads as done (green),
-					// not the blue "still waiting on something" active state
-					// the Pending/Connected/Awaiting/Accepted steps use while
-					// there's a next step still to come.
+				} else if ( RESOLVED_STEP_INDEX === index || VERIFIED_STEP_INDEX === index ) {
+					// Accepted and Verified are completed EVENTS, not
+					// something still being waited on - reaching either one
+					// means it already happened, so both read as done
+					// (green) immediately. Only Pending/Connected/Awaiting
+					// Response are genuinely still waiting on an external
+					// actor to do something next, which is what the blue
+					// "active" pulse is for.
 					step.classList.add( 'is-complete' );
 				} else {
 					step.classList.add( 'is-active' );
