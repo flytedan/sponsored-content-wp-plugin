@@ -10,6 +10,7 @@ namespace Flytedesk\SponsoredContent\Tests\Unit\Registration;
 use Brain\Monkey\Functions;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
+use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use Flytedesk\SponsoredContent\Tests\Unit\BrainMonkeyTestCase;
 use RuntimeException;
 
@@ -99,7 +100,10 @@ final class ClientTest extends BrainMonkeyTestCase {
 		Functions\expect( 'delete_option' )->once()->with( Client::OPTION_RESOLVED_AT );
 		Functions\expect( 'delete_option' )->once()->with( Client::OPTION_PING_RECEIVED_AT );
 
-		( new Client( $this->api_credential_that_issues( 'flytebot', 'freshly-issued-app-password' ) ) )->register();
+		$verification_tracker = \Mockery::mock( VerificationTracker::class );
+		$verification_tracker->shouldReceive( 'delete_all_data' )->once();
+
+		( new Client( $this->api_credential_that_issues( 'flytebot', 'freshly-issued-app-password' ), $verification_tracker ) )->register();
 
 		$this->assertSame( '2026-09-10 12:00:00', $options[ Client::OPTION_LAST_ATTEMPT_AT ] );
 		$this->assertSame( Client::STATUS_SENT, $options[ Client::OPTION_STATUS ] );
@@ -131,6 +135,32 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$this->assertArrayNotHasKey( Client::OPTION_STATUS, $options );
 		$this->assertSame( 500, $options[ Client::OPTION_LAST_HTTP_STATUS ] );
 		$this->assertStringContainsString( '500', $options[ Client::OPTION_LAST_ERROR ] );
+	}
+
+	/**
+	 * A failed re-registration attempt must not wipe out verification
+	 * evidence from an already-successful earlier cycle - only a *new*
+	 * successfully-sent registration should start a fresh verification
+	 * window (see {@see VerificationTracker::delete_all_data()}).
+	 */
+	public function test_register_does_not_reset_verification_data_on_a_failed_attempt(): void {
+		Functions\when( 'get_option' )->justReturn( 'the-token' );
+		Functions\when( 'get_bloginfo' )->justReturn( 'Publisher Site' );
+		Functions\when( 'home_url' )->justReturn( 'https://publisher.example.com' );
+		Functions\when( 'wp_parse_url' )->alias( static fn( string $url, int $component ) => parse_url( $url, $component ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- this closure IS the wp_parse_url() stub, so it must call the native parse_url() it stands in for.
+		Functions\when( 'wp_json_encode' )->justReturn( '{}' );
+		Functions\when( 'wp_remote_post' )->justReturn( array( 'response' => array( 'code' => 500 ) ) );
+		Functions\when( 'is_wp_error' )->justReturn( false );
+		Functions\when( 'wp_remote_retrieve_response_code' )->justReturn( 500 );
+		Functions\when( 'wp_remote_retrieve_body' )->justReturn( 'Internal Server Error' );
+		Functions\when( 'current_time' )->justReturn( '2026-09-10 12:00:00' );
+		Functions\when( '__' )->returnArg();
+		Functions\when( 'update_option' )->justReturn( true );
+
+		$verification_tracker = \Mockery::mock( VerificationTracker::class );
+		$verification_tracker->shouldReceive( 'delete_all_data' )->never();
+
+		( new Client( $this->api_credential_that_issues( 'flytebot', 'some-password' ), $verification_tracker ) )->register();
 	}
 
 	public function test_register_records_wp_error_message_on_network_failure(): void {

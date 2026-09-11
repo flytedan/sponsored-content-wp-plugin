@@ -87,7 +87,11 @@ class VerificationTracker {
 	}
 
 	/**
-	 * Used only by `uninstall.php`.
+	 * Used by `uninstall.php` for a full reset, and by
+	 * {@see Client::register()} every time a registration attempt is
+	 * actually (re-)sent - a CRUD success recorded before *this* attempt
+	 * started proves nothing about whether the connection it represents
+	 * still works, so each fresh cycle starts this tracker back at empty.
 	 */
 	public function delete_all_data(): void {
 		foreach ( self::ALL_OPTIONS as $option ) {

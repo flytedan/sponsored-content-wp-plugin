@@ -171,7 +171,18 @@
 			if ( index < currentIndex ) {
 				step.classList.add( 'is-complete' );
 			} else if ( index === currentIndex ) {
-				step.classList.add( 'rejected' === state.status && RESOLVED_STEP_INDEX === index ? 'is-rejected' : 'is-active' );
+				if ( 'rejected' === state.status && RESOLVED_STEP_INDEX === index ) {
+					step.classList.add( 'is-rejected' );
+				} else if ( VERIFIED_STEP_INDEX === index ) {
+					// Verified is the true end of the pipeline - nothing further
+					// ever happens after it, so it reads as done (green),
+					// not the blue "still waiting on something" active state
+					// the Pending/Connected/Awaiting/Accepted steps use while
+					// there's a next step still to come.
+					step.classList.add( 'is-complete' );
+				} else {
+					step.classList.add( 'is-active' );
+				}
 			} else {
 				step.classList.add( 'is-upcoming' );
 			}

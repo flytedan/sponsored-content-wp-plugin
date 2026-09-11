@@ -110,8 +110,11 @@ class Client {
 
 	private ApiCredential $api_credential;
 
-	public function __construct( ?ApiCredential $api_credential = null ) {
-		$this->api_credential = $api_credential ?? new ApiCredential();
+	private VerificationTracker $verification_tracker;
+
+	public function __construct( ?ApiCredential $api_credential = null, ?VerificationTracker $verification_tracker = null ) {
+		$this->api_credential       = $api_credential ?? new ApiCredential();
+		$this->verification_tracker = $verification_tracker ?? new VerificationTracker();
 	}
 
 	/**
@@ -240,9 +243,11 @@ class Client {
 	 * success, for the settings page's "Technical Details" view. Sets status
 	 * to STATUS_SENT only on an HTTP 200 response, per the documented
 	 * contract ("Registration Sent is after receiving a 200 OK response")
-	 * and clears any stale resolution/ping timestamp from a prior cycle, so
-	 * the timeline doesn't show a leftover "Connected" or "Accepted" step
-	 * from a previous registration attempt against a fresh one.
+	 * and clears any stale resolution/ping/verification state from a prior
+	 * cycle, so the timeline doesn't show a leftover "Connected", "Accepted",
+	 * or "Verified" step from a previous registration attempt against a
+	 * fresh one - a CRUD success from before this attempt was sent proves
+	 * nothing about whether *this* connection actually works.
 	 * Any other outcome (network failure, non-200 response, or failing to
 	 * issue the credential itself) leaves status unchanged and records the
 	 * failure reason - it does not revert an already-`accepted`/`rejected`
@@ -300,6 +305,7 @@ class Client {
 			delete_option( self::OPTION_LAST_ERROR );
 			delete_option( self::OPTION_RESOLVED_AT );
 			delete_option( self::OPTION_PING_RECEIVED_AT );
+			$this->verification_tracker->delete_all_data();
 			return;
 		}
 
