@@ -122,7 +122,7 @@ final class Plugin {
 
 		$registration_api_credential      = new RegistrationApiCredential();
 		$registration_state_presenter     = new StatePresenter( $this->registration_client, $registration_api_credential );
-		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client, $registration_api_credential, $registration_state_presenter );
+		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client, $this->seo_resolver, $registration_api_credential, $registration_state_presenter );
 		$this->registration_ajax          = new RegistrationAjaxController( $this->registration_client, $registration_state_presenter );
 	}
 

@@ -13,6 +13,7 @@ use Flytedesk\SponsoredContent\PostType;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
+use Flytedesk\SponsoredContent\Seo\Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -43,14 +44,17 @@ class RegistrationSettingsPage {
 
 	private Client $client;
 
+	private Resolver $seo_resolver;
+
 	private ApiCredential $api_credential;
 
 	private StatePresenter $state_presenter;
 
 	private string $hook_suffix = '';
 
-	public function __construct( Client $client, ?ApiCredential $api_credential = null, ?StatePresenter $state_presenter = null ) {
+	public function __construct( Client $client, Resolver $seo_resolver, ?ApiCredential $api_credential = null, ?StatePresenter $state_presenter = null ) {
 		$this->client          = $client;
+		$this->seo_resolver    = $seo_resolver;
 		$this->api_credential  = $api_credential ?? new ApiCredential();
 		$this->state_presenter = $state_presenter ?? new StatePresenter( $this->client, $this->api_credential );
 	}
@@ -184,6 +188,8 @@ class RegistrationSettingsPage {
 				</div>
 			</div>
 
+			<?php $this->render_seo_notice(); ?>
+
 			<?php $this->render_timeline_shell(); ?>
 
 			<div class="flytedesk-tabs">
@@ -197,6 +203,35 @@ class RegistrationSettingsPage {
 				<?php $this->render_technical_panel(); ?>
 				<?php $this->render_about_panel(); ?>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Warns the publisher when no supported SEO plugin ({@see Resolver}'s
+	 * Yoast/Rank Math/AIOSEO adapters) is active - content still publishes
+	 * fine either way (the fallback adapter writes its own basic meta tags
+	 * directly), but only a real SEO plugin also produces an XML sitemap
+	 * entry and structured data for it, so it's worth flagging rather than
+	 * silently degrading.
+	 */
+	private function render_seo_notice(): void {
+		if ( $this->seo_resolver->has_recommended_plugin() ) {
+			return;
+		}
+		?>
+		<div class="flytedesk-notice is-warning flytedesk-seo-notice">
+			<strong><?php esc_html_e( 'No supported SEO plugin detected.', 'flytedesk-sponsored-content' ); ?></strong>
+			<?php esc_html_e( "Sponsored articles will still publish, but using this plugin's own basic meta tags instead of a dedicated SEO plugin's fields - with no automatic XML sitemap entry or structured data. Install one of the following for full support:", 'flytedesk-sponsored-content' ); ?>
+			<?php
+			printf(
+				/* translators: 1: Yoast SEO plugin link, 2: Rank Math plugin link, 3: All in One SEO plugin link. */
+				esc_html__( '%1$s, %2$s, or %3$s.', 'flytedesk-sponsored-content' ),
+				'<a href="https://wordpress.org/plugins/wordpress-seo/" target="_blank" rel="noopener noreferrer">Yoast SEO</a>', // phpcs:ignore WordPress.Security.EscapeOutput.UnsafePrintingFunction -- fixed, hardcoded link markup authored by this plugin, not derived from request input; see the identical pattern in render_about_panel().
+				'<a href="https://wordpress.org/plugins/seo-by-rank-math/" target="_blank" rel="noopener noreferrer">Rank Math</a>', // phpcs:ignore WordPress.Security.EscapeOutput.UnsafePrintingFunction -- fixed, hardcoded link markup authored by this plugin, not derived from request input; see the identical pattern in render_about_panel().
+				'<a href="https://wordpress.org/plugins/all-in-one-seo-pack/" target="_blank" rel="noopener noreferrer">All in One SEO</a>' // phpcs:ignore WordPress.Security.EscapeOutput.UnsafePrintingFunction -- fixed, hardcoded link markup authored by this plugin, not derived from request input; see the identical pattern in render_about_panel().
+			);
+			?>
 		</div>
 		<?php
 	}

@@ -62,4 +62,16 @@ class Resolver {
 
 		return $last;
 	}
+
+	/**
+	 * True when a real, supported SEO plugin (Yoast, Rank Math, or AIOSEO)
+	 * is active - false when {@see resolve()} would fall back to
+	 * {@see FallbackAdapter}, meaning nothing else generates a sitemap entry
+	 * or structured data for this content, only this plugin's own basic
+	 * meta tags. Used by the Registration page to warn publishers running
+	 * no supported SEO plugin.
+	 */
+	public function has_recommended_plugin(): bool {
+		return ! ( $this->resolve() instanceof FallbackAdapter );
+	}
 }

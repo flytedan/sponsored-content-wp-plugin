@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A "Connected" step on that timeline, populated by an immediate `{"status":"ping"}` (or `"Connected"`) callback sponsored.flytedesk.com sends to the confirmation webhook right after registration - separates "did our registration reach them" from "can they reach back to us" instead of only surfacing a broken webhook path once a human tries to accept.
 - Composer PSR-4 autoloading, PHPUnit (Brain Monkey unit suite + wp-env-backed integration suite), and WordPress Coding Standards via PHPCS.
 - Deactivating now removes the `flytebot` user and its Application Password, revoking flytedesk's access the moment the plugin is turned off; registration status/token are left intact so reactivating re-registers rather than starting over. Deleting the plugin (`uninstall.php`) goes further, additionally removing every `flytedesk_*` option and the `flytedesk_api` role - a clean slate. Neither step touches already-published `fdsc_sponsored_post` content.
+- The Registration page now warns when no supported SEO plugin (Yoast, Rank Math, or All in One SEO) is active, with install links for each - content still publishes fine either way, but only a real SEO plugin also produces an XML sitemap entry and structured data for it.
 
 ### Fixed
 

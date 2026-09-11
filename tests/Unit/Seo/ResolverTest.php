@@ -8,6 +8,7 @@ declare( strict_types=1 );
 namespace Flytedesk\SponsoredContent\Tests\Unit\Seo;
 
 use Flytedesk\SponsoredContent\Seo\AdapterInterface;
+use Flytedesk\SponsoredContent\Seo\FallbackAdapter;
 use Flytedesk\SponsoredContent\Seo\Resolver;
 use Flytedesk\SponsoredContent\Tests\Unit\BrainMonkeyTestCase;
 
@@ -54,6 +55,18 @@ final class ResolverTest extends BrainMonkeyTestCase {
 		$this->expectException( \LogicException::class );
 
 		$resolver->resolve();
+	}
+
+	public function test_has_recommended_plugin_is_true_when_a_real_adapter_resolves(): void {
+		$resolver = new Resolver( array( $this->fake_adapter( true ) ) );
+
+		$this->assertTrue( $resolver->has_recommended_plugin() );
+	}
+
+	public function test_has_recommended_plugin_is_false_when_only_the_fallback_adapter_resolves(): void {
+		$resolver = new Resolver( array( new FallbackAdapter() ) );
+
+		$this->assertFalse( $resolver->has_recommended_plugin() );
 	}
 
 	private function fake_adapter( bool $active ): AdapterInterface {

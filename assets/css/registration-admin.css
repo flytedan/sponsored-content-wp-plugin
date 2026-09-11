@@ -297,6 +297,9 @@
 .flytedesk-notice.is-error { background: var(--fd-danger-bg); color: var(--fd-danger); }
 .flytedesk-notice.is-success { background: var(--fd-success-bg); color: var(--fd-success); }
 .flytedesk-notice.is-info { background: var(--fd-info-bg); color: var(--fd-navy); }
+.flytedesk-notice.is-warning { background: var(--fd-warning-bg); color: var(--fd-warning); }
+
+.flytedesk-notice.is-warning a { color: var(--fd-warning); text-decoration: underline; }
 
 .flytedesk-button {
 	appearance: none;
