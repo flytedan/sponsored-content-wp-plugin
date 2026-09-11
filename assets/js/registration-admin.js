@@ -218,20 +218,34 @@
 
 			var timestamp = step.querySelector( '.flytedesk-timeline-timestamp' );
 			if ( timestamp ) {
-				if ( VERIFIED_STEP_INDEX === index ) {
-					timestamp.textContent = ( state.verification && state.verification.verified_at ) || '';
-				} else {
-					// "Awaiting Response" (index 2) has no event of its own -
-					// it's just the span of time between connected and resolved.
-					var field = [ 'created_at', 'ping_received_at', '', 'resolved_at' ][ index ];
-					timestamp.textContent = ( field && state.timeline[ field ] ) || '';
-				}
+				timestamp.textContent = timelineTimestampFor( index, state );
 			}
 		} );
 
 		connectors.forEach( function ( connector, index ) {
 			connector.classList.toggle( 'is-complete', index < currentIndex );
 		} );
+	}
+
+	/**
+	 * Pending shows when the most recent registration attempt was actually
+	 * sent (`technical.last_attempt_at`), not `timeline.created_at` - the
+	 * one-time date this site was first ever added to the workflow. Using
+	 * created_at made every re-registration look stuck on a stale date from
+	 * however long ago the site was first set up, instead of reading as
+	 * "this just happened."
+	 */
+	function timelineTimestampFor( index, state ) {
+		if ( 0 === index ) {
+			return state.technical.last_attempt_at || '';
+		}
+		if ( VERIFIED_STEP_INDEX === index ) {
+			return ( state.verification && state.verification.verified_at ) || '';
+		}
+		// "Awaiting Response" (index 2) has no event of its own - it's just
+		// the span of time between connected and resolved.
+		var field = [ '', 'ping_received_at', '', 'resolved_at' ][ index ];
+		return ( field && state.timeline[ field ] ) || '';
 	}
 
 	function currentTimelineIndex( state ) {
