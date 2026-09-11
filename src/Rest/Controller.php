@@ -12,6 +12,7 @@ namespace Flytedesk\SponsoredContent\Rest;
 use Flytedesk\SponsoredContent\Capabilities;
 use Flytedesk\SponsoredContent\Markdown\Converter;
 use Flytedesk\SponsoredContent\PostType;
+use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use Flytedesk\SponsoredContent\Seo\Resolver;
 use WP_Error;
 use WP_HTTP_Response;
@@ -61,8 +62,11 @@ class Controller {
 
 	private Resolver $seo_resolver;
 
-	public function __construct( Resolver $seo_resolver ) {
-		$this->seo_resolver = $seo_resolver;
+	private VerificationTracker $verification_tracker;
+
+	public function __construct( Resolver $seo_resolver, VerificationTracker $verification_tracker ) {
+		$this->seo_resolver         = $seo_resolver;
+		$this->verification_tracker = $verification_tracker;
 	}
 
 	public function register_routes(): void {
@@ -176,6 +180,7 @@ class Controller {
 		}
 
 		$this->seo_resolver->resolve()->write( $post_id, $data['seo'] );
+		$this->verification_tracker->mark_create_verified();
 
 		return new WP_REST_Response( $this->present( $post_id ), 201 );
 	}
@@ -235,6 +240,7 @@ class Controller {
 		}
 
 		$this->seo_resolver->resolve()->write( $post->ID, $data['seo'] );
+		$this->verification_tracker->mark_update_verified();
 
 		return new WP_REST_Response( $this->present( $post->ID ), 200 );
 	}
@@ -258,6 +264,8 @@ class Controller {
 				array( 'status' => 500 )
 			);
 		}
+
+		$this->verification_tracker->mark_delete_verified();
 
 		return new WP_REST_Response( null, 204 );
 	}

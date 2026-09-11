@@ -173,6 +173,61 @@
 	min-height: 15px;
 }
 
+/* ---------- Verification breakdown ---------- */
+
+.flytedesk-verification-breakdown {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px 28px;
+	background: #fff;
+	border: 1px solid var(--fd-border);
+	border-radius: var(--fd-radius);
+	padding: 14px 32px;
+	margin-bottom: 24px;
+}
+
+.flytedesk-verification-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12.5px;
+}
+
+.flytedesk-verification-icon {
+	flex: 0 0 auto;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--fd-gray-bg);
+	border: 1.5px solid var(--fd-border);
+	color: var(--fd-text-muted);
+	font-size: 10.5px;
+	font-weight: 700;
+	transition: all 0.25s ease;
+}
+
+.flytedesk-verification-item.is-verified .flytedesk-verification-icon {
+	background: var(--fd-success);
+	border-color: var(--fd-success);
+	color: #fff;
+}
+
+.flytedesk-verification-label {
+	font-weight: 600;
+	color: var(--fd-text);
+}
+
+.flytedesk-verification-timestamp {
+	color: var(--fd-text-muted);
+}
+
+.flytedesk-verification-item.is-verified .flytedesk-verification-timestamp {
+	color: var(--fd-success);
+}
+
 /* ---------- Tabs ---------- */
 
 .flytedesk-tabs {
@@ -594,6 +649,11 @@
 	.flytedesk-timeline-step {
 		flex-direction: row;
 		text-align: left;
+		gap: 12px;
+	}
+
+	.flytedesk-verification-breakdown {
+		flex-direction: column;
 		gap: 12px;
 	}
 

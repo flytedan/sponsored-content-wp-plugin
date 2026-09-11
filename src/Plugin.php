@@ -15,6 +15,7 @@ use Flytedesk\SponsoredContent\Registration\ApiCredential as RegistrationApiCred
 use Flytedesk\SponsoredContent\Registration\Client as RegistrationClient;
 use Flytedesk\SponsoredContent\Registration\ConfirmationController;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
+use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use Flytedesk\SponsoredContent\Rest\Controller;
 use Flytedesk\SponsoredContent\Seo\FallbackAdapter;
 use Flytedesk\SponsoredContent\Seo\Resolver;
@@ -116,12 +117,13 @@ final class Plugin {
 	private function __construct() {
 		$this->post_type                 = new PostType();
 		$this->seo_resolver              = new Resolver();
-		$this->controller                = new Controller( $this->seo_resolver );
+		$verification_tracker            = new VerificationTracker();
+		$this->controller                = new Controller( $this->seo_resolver, $verification_tracker );
 		$this->registration_client       = new RegistrationClient();
 		$this->registration_confirmation = new ConfirmationController( $this->registration_client );
 
 		$registration_api_credential      = new RegistrationApiCredential();
-		$registration_state_presenter     = new StatePresenter( $this->registration_client, $registration_api_credential );
+		$registration_state_presenter     = new StatePresenter( $this->registration_client, $registration_api_credential, $verification_tracker );
 		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client, $this->seo_resolver, $registration_api_credential, $registration_state_presenter );
 		$this->registration_ajax          = new RegistrationAjaxController( $this->registration_client, $registration_state_presenter );
 	}

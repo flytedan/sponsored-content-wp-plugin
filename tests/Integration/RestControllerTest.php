@@ -8,6 +8,7 @@ declare( strict_types=1 );
 namespace Flytedesk\SponsoredContent\Tests\Integration;
 
 use Flytedesk\SponsoredContent\PostType;
+use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use WP_REST_Request;
 use WP_Test_REST_TestCase;
 
@@ -118,6 +119,9 @@ final class RestControllerTest extends WP_Test_REST_TestCase {
 	public function test_full_create_read_update_delete_lifecycle(): void {
 		wp_set_current_user( $this->author_id );
 
+		$verification_tracker = new VerificationTracker();
+		$this->assertFalse( $verification_tracker->is_fully_verified() );
+
 		// Create.
 		$create_request = new WP_REST_Request( 'POST', '/flytedesk/v1/posts' );
 		$create_request->set_header( 'content-type', 'application/json' );
@@ -136,6 +140,7 @@ final class RestControllerTest extends WP_Test_REST_TestCase {
 		$post    = get_post( $post_id );
 		$this->assertSame( PostType::POST_TYPE, $post->post_type );
 		$this->assertStringContainsString( '<h2>Why timing matters</h2>', $post->post_content );
+		$this->assertNotSame( '', $verification_tracker->get_create_verified_at() );
 
 		// Read.
 		$read_request  = new WP_REST_Request( 'GET', '/flytedesk/v1/posts/' . $post_id );
@@ -159,6 +164,7 @@ final class RestControllerTest extends WP_Test_REST_TestCase {
 		$this->assertSame( 200, $update_response->get_status() );
 		$this->assertSame( 'Updated Title', $updated['title'] );
 		$this->assertStringContainsString( 'Updated body.', get_post( $post_id )->post_content );
+		$this->assertNotSame( '', $verification_tracker->get_update_verified_at() );
 
 		// Delete.
 		$delete_request  = new WP_REST_Request( 'DELETE', '/flytedesk/v1/posts/' . $post_id );
@@ -166,6 +172,8 @@ final class RestControllerTest extends WP_Test_REST_TestCase {
 
 		$this->assertSame( 204, $delete_response->get_status() );
 		$this->assertSame( 'trash', get_post( $post_id )->post_status );
+		$this->assertNotSame( '', $verification_tracker->get_delete_verified_at() );
+		$this->assertTrue( $verification_tracker->is_fully_verified() );
 	}
 
 	public function test_get_unknown_id_returns_404(): void {

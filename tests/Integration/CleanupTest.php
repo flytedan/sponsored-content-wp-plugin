@@ -11,6 +11,7 @@ use Flytedesk\SponsoredContent\Capabilities;
 use Flytedesk\SponsoredContent\Plugin;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
+use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use WP_UnitTestCase;
 
 /**
@@ -52,6 +53,12 @@ final class CleanupTest extends WP_UnitTestCase {
 		$this->assertInstanceOf( \WP_User::class, get_user_by( 'login', 'flytebot' ) );
 		$this->assertNotNull( get_role( Capabilities::ROLE ) );
 
+		$verification_tracker = new VerificationTracker();
+		$verification_tracker->mark_create_verified();
+		$verification_tracker->mark_update_verified();
+		$verification_tracker->mark_delete_verified();
+		$this->assertTrue( $verification_tracker->is_fully_verified() );
+
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 			define( 'WP_UNINSTALL_PLUGIN', 'sponsored-content-wp-plugin/sponsored-content-wp-plugin.php' );
 		}
@@ -77,9 +84,14 @@ final class CleanupTest extends WP_UnitTestCase {
 				Client::OPTION_LAST_REQUEST,
 				Client::OPTION_LAST_RESPONSE_BODY,
 				Client::OPTION_NEEDS_REGISTRATION,
+				VerificationTracker::OPTION_CREATE_VERIFIED_AT,
+				VerificationTracker::OPTION_UPDATE_VERIFIED_AT,
+				VerificationTracker::OPTION_DELETE_VERIFIED_AT,
 			) as $option
 		) {
 			$this->assertFalse( get_option( $option ), "Option {$option} was not removed by uninstall." );
 		}
+
+		$this->assertFalse( ( new VerificationTracker() )->is_fully_verified() );
 	}
 }

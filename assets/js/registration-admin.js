@@ -24,6 +24,7 @@
 		technicalPanel: document.getElementById( 'flytedesk-technical-panel' ),
 		registerButton: document.getElementById( 'flytedesk-register-button' ),
 		pollIndicator: document.getElementById( 'flytedesk-poll-indicator' ),
+		verificationBreakdown: document.getElementById( 'flytedesk-verification-breakdown' ),
 	};
 
 	document.addEventListener( 'DOMContentLoaded', function () {
@@ -147,10 +148,12 @@
 		renderTimeline( state );
 		renderStatusPanel( state );
 		renderTechnicalPanel( state );
+		renderVerificationBreakdown( state );
 	}
 
-	// Step indices: 0 Pending, 1 Connected, 2 Awaiting Response, 3 Accepted/Rejected.
+	// Step indices: 0 Pending, 1 Connected, 2 Awaiting Response, 3 Accepted/Rejected, 4 Verified.
 	var RESOLVED_STEP_INDEX = 3;
+	var VERIFIED_STEP_INDEX = 4;
 
 	function renderTimeline( state ) {
 		if ( ! els.timeline ) {
@@ -185,10 +188,14 @@
 
 			var timestamp = step.querySelector( '.flytedesk-timeline-timestamp' );
 			if ( timestamp ) {
-				// "Awaiting Response" (index 2) has no event of its own - it's
-				// just the span of time between being connected and resolved.
-				var field = [ 'created_at', 'ping_received_at', '', 'resolved_at' ][ index ];
-				timestamp.textContent = ( field && state.timeline[ field ] ) || '';
+				if ( VERIFIED_STEP_INDEX === index ) {
+					timestamp.textContent = ( state.verification && state.verification.verified_at ) || '';
+				} else {
+					// "Awaiting Response" (index 2) has no event of its own -
+					// it's just the span of time between connected and resolved.
+					var field = [ 'created_at', 'ping_received_at', '', 'resolved_at' ][ index ];
+					timestamp.textContent = ( field && state.timeline[ field ] ) || '';
+				}
 			}
 		} );
 
@@ -198,6 +205,9 @@
 	}
 
 	function currentTimelineIndex( state ) {
+		if ( 'accepted' === state.status && state.verification && state.verification.all_verified ) {
+			return VERIFIED_STEP_INDEX;
+		}
 		if ( 'accepted' === state.status || 'rejected' === state.status ) {
 			return RESOLVED_STEP_INDEX;
 		}
@@ -304,6 +314,33 @@
 			responseBlock.textContent = tech.last_response_body || config.strings.emptyResponseBody;
 			responseBlock.classList.toggle( 'is-empty', ! tech.last_response_body );
 		}
+	}
+
+	function renderVerificationBreakdown( state ) {
+		if ( ! els.verificationBreakdown || ! state.verification ) {
+			return;
+		}
+
+		[ 'create', 'update', 'delete' ].forEach( function ( key ) {
+			var item = els.verificationBreakdown.querySelector( '[data-verification="' + key + '"]' );
+			if ( ! item ) {
+				return;
+			}
+
+			var verifiedAt = state.verification[ key + '_at' ];
+
+			item.classList.toggle( 'is-verified', !! verifiedAt );
+
+			var icon = item.querySelector( '.flytedesk-verification-icon' );
+			if ( icon ) {
+				icon.textContent = verifiedAt ? '✓' : '○';
+			}
+
+			var timestamp = item.querySelector( '.flytedesk-verification-timestamp' );
+			if ( timestamp ) {
+				timestamp.textContent = verifiedAt || config.strings.notYetVerified;
+			}
+		} );
 	}
 
 	function renderNotice( container, type, message ) {

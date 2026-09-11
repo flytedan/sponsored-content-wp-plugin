@@ -12,6 +12,7 @@ use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
 use Flytedesk\SponsoredContent\Registration\ConfirmationController;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
+use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use WP_UnitTestCase;
 
 /**
@@ -116,7 +117,7 @@ final class RegistrationTest extends WP_UnitTestCase {
 		$client = new Client();
 		$client->ensure_initial_state();
 
-		$state = ( new StatePresenter( $client, new ApiCredential() ) )->to_array();
+		$state = ( new StatePresenter( $client, new ApiCredential(), new VerificationTracker() ) )->to_array();
 
 		$this->assertNotSame( '', $state['timeline']['created_at'] );
 		$this->assertSame(

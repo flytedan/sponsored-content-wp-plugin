@@ -13,6 +13,7 @@ use Flytedesk\SponsoredContent\PostType;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
+use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use Flytedesk\SponsoredContent\Seo\Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -56,7 +57,7 @@ class RegistrationSettingsPage {
 		$this->client          = $client;
 		$this->seo_resolver    = $seo_resolver;
 		$this->api_credential  = $api_credential ?? new ApiCredential();
-		$this->state_presenter = $state_presenter ?? new StatePresenter( $this->client, $this->api_credential );
+		$this->state_presenter = $state_presenter ?? new StatePresenter( $this->client, $this->api_credential, new VerificationTracker() );
 	}
 
 	public function register(): void {
@@ -136,6 +137,7 @@ class RegistrationSettingsPage {
 					'noAttemptsYet'     => __( 'No attempts yet.', 'flytedesk-sponsored-content' ),
 					'networkError'      => __( 'Network error (no response received)', 'flytedesk-sponsored-content' ),
 					'emptyResponseBody' => __( '(empty response body)', 'flytedesk-sponsored-content' ),
+					'notYetVerified'    => __( 'Not yet verified', 'flytedesk-sponsored-content' ),
 					'statusLabels'      => array(
 						Client::STATUS_PENDING  => __( 'Pending', 'flytedesk-sponsored-content' ),
 						Client::STATUS_SENT     => __( 'Registration Sent', 'flytedesk-sponsored-content' ),
@@ -191,6 +193,8 @@ class RegistrationSettingsPage {
 			<?php $this->render_seo_notice(); ?>
 
 			<?php $this->render_timeline_shell(); ?>
+
+			<?php $this->render_verification_breakdown(); ?>
 
 			<div class="flytedesk-tabs">
 				<div class="flytedesk-tab-nav" role="tablist">
@@ -261,6 +265,42 @@ class RegistrationSettingsPage {
 				<div class="flytedesk-timeline-icon"></div>
 				<div class="flytedesk-timeline-label"><?php esc_html_e( 'Accepted / Rejected', 'flytedesk-sponsored-content' ); ?></div>
 				<div class="flytedesk-timeline-timestamp"></div>
+			</div>
+			<div class="flytedesk-timeline-connector"></div>
+			<div class="flytedesk-timeline-step" data-step="verified">
+				<div class="flytedesk-timeline-icon"></div>
+				<div class="flytedesk-timeline-label"><?php esc_html_e( 'Verified', 'flytedesk-sponsored-content' ); ?></div>
+				<div class="flytedesk-timeline-timestamp"></div>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The "Verified" timeline step's detail: individual Create/Update/Delete
+	 * status, each driven by {@see \Flytedesk\SponsoredContent\Registration\VerificationTracker}
+	 * recording the first time flytedesk's platform successfully exercised
+	 * that operation against this site's REST API (real or test content -
+	 * only that it worked at least once). The top-level "Verified" step only
+	 * shows complete once all three here do.
+	 */
+	private function render_verification_breakdown(): void {
+		?>
+		<div class="flytedesk-verification-breakdown" id="flytedesk-verification-breakdown">
+			<div class="flytedesk-verification-item" data-verification="create">
+				<span class="flytedesk-verification-icon"></span>
+				<span class="flytedesk-verification-label"><?php esc_html_e( 'Create', 'flytedesk-sponsored-content' ); ?></span>
+				<span class="flytedesk-verification-timestamp"></span>
+			</div>
+			<div class="flytedesk-verification-item" data-verification="update">
+				<span class="flytedesk-verification-icon"></span>
+				<span class="flytedesk-verification-label"><?php esc_html_e( 'Update', 'flytedesk-sponsored-content' ); ?></span>
+				<span class="flytedesk-verification-timestamp"></span>
+			</div>
+			<div class="flytedesk-verification-item" data-verification="delete">
+				<span class="flytedesk-verification-icon"></span>
+				<span class="flytedesk-verification-label"><?php esc_html_e( 'Delete', 'flytedesk-sponsored-content' ); ?></span>
+				<span class="flytedesk-verification-timestamp"></span>
 			</div>
 		</div>
 		<?php

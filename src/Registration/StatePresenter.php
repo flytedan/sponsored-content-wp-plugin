@@ -27,9 +27,12 @@ class StatePresenter {
 
 	private ApiCredential $api_credential;
 
-	public function __construct( Client $client, ApiCredential $api_credential ) {
-		$this->client         = $client;
-		$this->api_credential = $api_credential;
+	private VerificationTracker $verification_tracker;
+
+	public function __construct( Client $client, ApiCredential $api_credential, VerificationTracker $verification_tracker ) {
+		$this->client               = $client;
+		$this->api_credential       = $api_credential;
+		$this->verification_tracker = $verification_tracker;
 	}
 
 	/**
@@ -50,6 +53,13 @@ class StatePresenter {
 	 *         last_http_status: int,
 	 *         last_request: array<string, mixed>,
 	 *         last_response_body: string
+	 *     },
+	 *     verification: array{
+	 *         create_at: string,
+	 *         update_at: string,
+	 *         delete_at: string,
+	 *         verified_at: string,
+	 *         all_verified: bool
 	 *     }
 	 * }
 	 */
@@ -71,6 +81,13 @@ class StatePresenter {
 				'last_http_status'   => $this->client->get_last_http_status(),
 				'last_request'       => $this->client->get_last_request(),
 				'last_response_body' => $this->client->get_last_response_body(),
+			),
+			'verification'       => array(
+				'create_at'    => $this->format_timestamp( $this->verification_tracker->get_create_verified_at() ),
+				'update_at'    => $this->format_timestamp( $this->verification_tracker->get_update_verified_at() ),
+				'delete_at'    => $this->format_timestamp( $this->verification_tracker->get_delete_verified_at() ),
+				'verified_at'  => $this->format_timestamp( $this->verification_tracker->get_verified_at() ),
+				'all_verified' => $this->verification_tracker->is_fully_verified(),
 			),
 		);
 	}
