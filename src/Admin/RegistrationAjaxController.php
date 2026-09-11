@@ -70,6 +70,13 @@ class RegistrationAjaxController {
 	 * here exists for defensiveness and for unit-testability (where that
 	 * termination is mocked away), not because it's expected to be reached
 	 * in production.
+	 *
+	 * `check_ajax_referer()` defaults to killing the request itself
+	 * (printing a bare `-1` and exiting) on an invalid nonce - passed
+	 * `$stop = false` here so a bad nonce instead falls through to our own
+	 * `wp_send_json_error()` call below, keeping every failure path on this
+	 * endpoint in the same `{"success":false,"data":{...}}` JSON shape
+	 * rather than a plain `-1` for this one case.
 	 */
 	private function authorize(): bool {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -81,7 +88,14 @@ class RegistrationAjaxController {
 			return false;
 		}
 
-		check_ajax_referer( RegistrationSettingsPage::NONCE_ACTION );
+		if ( ! check_ajax_referer( RegistrationSettingsPage::NONCE_ACTION, false, false ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Your session has expired. Please reload the page and try again.', 'flytedesk-sponsored-content' ) ),
+				403
+			);
+
+			return false;
+		}
 
 		return true;
 	}

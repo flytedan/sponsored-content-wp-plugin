@@ -96,18 +96,21 @@ class RegistrationSettingsPage {
 			return;
 		}
 
+		$css_path = FLYTEDESK_SPONSORED_CONTENT_DIR . 'assets/css/registration-admin.css';
+		$js_path  = FLYTEDESK_SPONSORED_CONTENT_DIR . 'assets/js/registration-admin.js';
+
 		wp_enqueue_style(
 			'flytedesk-registration-admin',
 			FLYTEDESK_SPONSORED_CONTENT_URL . 'assets/css/registration-admin.css',
 			array(),
-			FLYTEDESK_SPONSORED_CONTENT_VERSION
+			$this->asset_version( $css_path )
 		);
 
 		wp_enqueue_script(
 			'flytedesk-registration-admin',
 			FLYTEDESK_SPONSORED_CONTENT_URL . 'assets/js/registration-admin.js',
 			array(),
-			FLYTEDESK_SPONSORED_CONTENT_VERSION,
+			$this->asset_version( $js_path ),
 			true
 		);
 
@@ -124,6 +127,7 @@ class RegistrationSettingsPage {
 					'sending'           => __( 'Sending…', 'flytedesk-sponsored-content' ),
 					'genericError'      => __( 'Something went wrong. Please try again.', 'flytedesk-sponsored-content' ),
 					'acceptedRejected'  => __( 'Accepted / Rejected', 'flytedesk-sponsored-content' ),
+					'accepted'          => __( 'Accepted', 'flytedesk-sponsored-content' ),
 					'rejected'          => __( 'Rejected', 'flytedesk-sponsored-content' ),
 					'noAttemptsYet'     => __( 'No attempts yet.', 'flytedesk-sponsored-content' ),
 					'networkError'      => __( 'Network error (no response received)', 'flytedesk-sponsored-content' ),
@@ -137,6 +141,21 @@ class RegistrationSettingsPage {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Uses the asset file's own last-modified time as the cache-busting
+	 * version, rather than the plugin's static version constant - a plugin
+	 * release that ships new CSS/JS without remembering to bump that
+	 * constant would otherwise leave every browser serving a stale cached
+	 * copy indefinitely after an update. `filemtime()` changes automatically
+	 * whenever the file's actual contents change, so this can't go stale.
+	 * Falls back to the plugin version if the file is somehow unreadable.
+	 */
+	private function asset_version( string $absolute_path ): string {
+		$mtime = file_exists( $absolute_path ) ? filemtime( $absolute_path ) : false;
+
+		return false !== $mtime ? (string) $mtime : FLYTEDESK_SPONSORED_CONTENT_VERSION;
 	}
 
 	public function render(): void {
@@ -191,7 +210,13 @@ class RegistrationSettingsPage {
 				<div class="flytedesk-timeline-timestamp"></div>
 			</div>
 			<div class="flytedesk-timeline-connector"></div>
-			<div class="flytedesk-timeline-step" data-step="sent">
+			<div class="flytedesk-timeline-step" data-step="connected">
+				<div class="flytedesk-timeline-icon"></div>
+				<div class="flytedesk-timeline-label"><?php esc_html_e( 'Connected', 'flytedesk-sponsored-content' ); ?></div>
+				<div class="flytedesk-timeline-timestamp"></div>
+			</div>
+			<div class="flytedesk-timeline-connector"></div>
+			<div class="flytedesk-timeline-step" data-step="awaiting">
 				<div class="flytedesk-timeline-icon"></div>
 				<div class="flytedesk-timeline-label"><?php esc_html_e( 'Awaiting Response', 'flytedesk-sponsored-content' ); ?></div>
 				<div class="flytedesk-timeline-timestamp"></div>

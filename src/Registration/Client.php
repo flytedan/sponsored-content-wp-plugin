@@ -41,6 +41,7 @@ class Client {
 	public const OPTION_LAST_ERROR         = 'flytedesk_registration_last_error';
 	public const OPTION_CREATED_AT         = 'flytedesk_registration_created_at';
 	public const OPTION_SENT_AT            = 'flytedesk_registration_sent_at';
+	public const OPTION_PING_RECEIVED_AT   = 'flytedesk_registration_ping_received_at';
 	public const OPTION_RESOLVED_AT        = 'flytedesk_registration_resolved_at';
 	public const OPTION_LAST_ATTEMPT_AT    = 'flytedesk_registration_last_attempt_at';
 	public const OPTION_LAST_HTTP_STATUS   = 'flytedesk_registration_last_http_status';
@@ -127,6 +128,20 @@ class Client {
 		update_option( self::OPTION_RESOLVED_AT, current_time( 'mysql' ) );
 	}
 
+	/**
+	 * Used by {@see ConfirmationController} when sponsored.flytedesk.com's
+	 * immediate post-registration "ping" callback arrives, confirming this
+	 * site is actually reachable from their side - independent of whether a
+	 * human has reviewed the registration yet. Deliberately does not touch
+	 * `status`/`set_status()`: a ping is a connectivity check, not a
+	 * decision, so the registration stays STATUS_SENT (awaiting human
+	 * review) regardless. Drives the settings page timeline's "Connected"
+	 * step, shown between "Pending" and "Awaiting Response".
+	 */
+	public function mark_ping_received(): void {
+		update_option( self::OPTION_PING_RECEIVED_AT, current_time( 'mysql' ) );
+	}
+
 	public function get_token(): string {
 		return (string) get_option( self::OPTION_TOKEN, '' );
 	}
@@ -145,6 +160,10 @@ class Client {
 
 	public function get_resolved_at(): string {
 		return (string) get_option( self::OPTION_RESOLVED_AT, '' );
+	}
+
+	public function get_ping_received_at(): string {
+		return (string) get_option( self::OPTION_PING_RECEIVED_AT, '' );
 	}
 
 	public function get_last_attempt_at(): string {
@@ -189,7 +208,9 @@ class Client {
 	 * success, for the settings page's "Technical Details" view. Sets status
 	 * to STATUS_SENT only on an HTTP 200 response, per the documented
 	 * contract ("Registration Sent is after receiving a 200 OK response")
-	 * and clears any stale STATUS_REJECTED resolution from a prior cycle.
+	 * and clears any stale resolution/ping timestamp from a prior cycle, so
+	 * the timeline doesn't show a leftover "Connected" or "Accepted" step
+	 * from a previous registration attempt against a fresh one.
 	 * Any other outcome (network failure, non-200 response, or failing to
 	 * issue the credential itself) leaves status unchanged and records the
 	 * failure reason - it does not revert an already-`accepted`/`rejected`
@@ -246,6 +267,7 @@ class Client {
 			update_option( self::OPTION_SENT_AT, current_time( 'mysql' ) );
 			delete_option( self::OPTION_LAST_ERROR );
 			delete_option( self::OPTION_RESOLVED_AT );
+			delete_option( self::OPTION_PING_RECEIVED_AT );
 			return;
 		}
 

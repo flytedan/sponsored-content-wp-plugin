@@ -22,6 +22,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$client->shouldReceive( 'get_token' )->once()->andReturn( 'the-token' );
 		$client->shouldReceive( 'get_created_at' )->once()->andReturn( '2026-09-01 10:00:00' );
 		$client->shouldReceive( 'get_sent_at' )->once()->andReturn( '2026-09-02 11:00:00' );
+		$client->shouldReceive( 'get_ping_received_at' )->once()->andReturn( '2026-09-02 11:00:05' );
 		$client->shouldReceive( 'get_resolved_at' )->once()->andReturn( '' );
 		$client->shouldReceive( 'get_last_error' )->once()->andReturn( 'oops' );
 		$client->shouldReceive( 'get_last_attempt_at' )->once()->andReturn( '2026-09-02 11:00:00' );
@@ -45,6 +46,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$this->assertSame( 'flytebot', $state['api_username'] );
 		$this->assertSame( 'formatted(2026-09-01 10:00:00)', $state['timeline']['created_at'] );
 		$this->assertSame( 'formatted(2026-09-02 11:00:00)', $state['timeline']['sent_at'] );
+		$this->assertSame( 'formatted(2026-09-02 11:00:05)', $state['timeline']['ping_received_at'] );
 		$this->assertSame( '', $state['timeline']['resolved_at'] );
 		$this->assertSame( 'oops', $state['last_error'] );
 		$this->assertSame( 'formatted(2026-09-02 11:00:00)', $state['technical']['last_attempt_at'] );
@@ -60,6 +62,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$client->shouldReceive( 'get_token' )->andReturn( 'the-token' );
 		$client->shouldReceive( 'get_created_at' )->andReturn( '' );
 		$client->shouldReceive( 'get_sent_at' )->andReturn( '' );
+		$client->shouldReceive( 'get_ping_received_at' )->andReturn( '' );
 		$client->shouldReceive( 'get_resolved_at' )->andReturn( '' );
 		$client->shouldReceive( 'get_last_error' )->andReturn( '' );
 		$client->shouldReceive( 'get_last_attempt_at' )->andReturn( '' );
@@ -76,6 +79,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 
 		$this->assertSame( '', $state['timeline']['created_at'] );
 		$this->assertSame( '', $state['timeline']['sent_at'] );
+		$this->assertSame( '', $state['timeline']['ping_received_at'] );
 		$this->assertSame( '', $state['timeline']['resolved_at'] );
 		$this->assertSame( '', $state['technical']['last_attempt_at'] );
 	}

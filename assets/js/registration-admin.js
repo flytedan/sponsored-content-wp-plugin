@@ -149,17 +149,15 @@
 		renderTechnicalPanel( state );
 	}
 
+	// Step indices: 0 Pending, 1 Connected, 2 Awaiting Response, 3 Accepted/Rejected.
+	var RESOLVED_STEP_INDEX = 3;
+
 	function renderTimeline( state ) {
 		if ( ! els.timeline ) {
 			return;
 		}
 
-		var currentIndex = 0;
-		if ( 'sent' === state.status ) {
-			currentIndex = 1;
-		} else if ( 'accepted' === state.status || 'rejected' === state.status ) {
-			currentIndex = 2;
-		}
+		var currentIndex = currentTimelineIndex( state );
 
 		var steps = els.timeline.querySelectorAll( '.flytedesk-timeline-step' );
 		var connectors = els.timeline.querySelectorAll( '.flytedesk-timeline-connector' );
@@ -170,7 +168,7 @@
 			if ( index < currentIndex ) {
 				step.classList.add( 'is-complete' );
 			} else if ( index === currentIndex ) {
-				step.classList.add( 'rejected' === state.status && 2 === index ? 'is-rejected' : 'is-active' );
+				step.classList.add( 'rejected' === state.status && RESOLVED_STEP_INDEX === index ? 'is-rejected' : 'is-active' );
 			} else {
 				step.classList.add( 'is-upcoming' );
 			}
@@ -181,14 +179,16 @@
 			}
 
 			var label = step.querySelector( '.flytedesk-timeline-label' );
-			if ( label && 2 === index ) {
-				label.textContent = 'rejected' === state.status ? config.strings.rejected : config.strings.acceptedRejected;
+			if ( label && RESOLVED_STEP_INDEX === index ) {
+				label.textContent = resolvedStepLabel( state.status );
 			}
 
 			var timestamp = step.querySelector( '.flytedesk-timeline-timestamp' );
 			if ( timestamp ) {
-				var field = [ 'created_at', 'sent_at', 'resolved_at' ][ index ];
-				timestamp.textContent = state.timeline[ field ] || '';
+				// "Awaiting Response" (index 2) has no event of its own - it's
+				// just the span of time between being connected and resolved.
+				var field = [ 'created_at', 'ping_received_at', '', 'resolved_at' ][ index ];
+				timestamp.textContent = ( field && state.timeline[ field ] ) || '';
 			}
 		} );
 
@@ -197,8 +197,28 @@
 		} );
 	}
 
+	function currentTimelineIndex( state ) {
+		if ( 'accepted' === state.status || 'rejected' === state.status ) {
+			return RESOLVED_STEP_INDEX;
+		}
+		if ( 'sent' === state.status ) {
+			return state.timeline.ping_received_at ? 2 : 1;
+		}
+		return 0;
+	}
+
+	function resolvedStepLabel( status ) {
+		if ( 'accepted' === status ) {
+			return config.strings.accepted;
+		}
+		if ( 'rejected' === status ) {
+			return config.strings.rejected;
+		}
+		return config.strings.acceptedRejected;
+	}
+
 	function iconFor( stepIndex, status, isDone ) {
-		if ( 2 === stepIndex && 'rejected' === status ) {
+		if ( RESOLVED_STEP_INDEX === stepIndex && 'rejected' === status ) {
 			return '✕'; // ×
 		}
 		if ( isDone ) {

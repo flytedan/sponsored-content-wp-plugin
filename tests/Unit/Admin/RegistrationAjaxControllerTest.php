@@ -61,6 +61,21 @@ final class RegistrationAjaxControllerTest extends BrainMonkeyTestCase {
 		( new RegistrationAjaxController( $client, $state_presenter ) )->handle_register();
 	}
 
+	public function test_handle_status_sends_403_json_error_on_bad_nonce_instead_of_dying(): void {
+		Functions\when( 'current_user_can' )->justReturn( true );
+		Functions\when( 'check_ajax_referer' )->justReturn( false );
+		Functions\when( '__' )->returnArg();
+
+		$client          = \Mockery::mock( Client::class );
+		$state_presenter = \Mockery::mock( StatePresenter::class );
+		$state_presenter->shouldReceive( 'to_array' )->never();
+
+		Functions\expect( 'wp_send_json_error' )->once()->with( \Mockery::type( 'array' ), 403 );
+		Functions\expect( 'wp_send_json_success' )->never();
+
+		( new RegistrationAjaxController( $client, $state_presenter ) )->handle_status();
+	}
+
 	public function test_handle_register_does_not_run_registration_when_not_authorized(): void {
 		Functions\when( 'current_user_can' )->justReturn( false );
 		Functions\when( '__' )->returnArg();

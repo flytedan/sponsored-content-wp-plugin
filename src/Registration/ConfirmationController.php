@@ -30,6 +30,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  * has the token from the registration payload, so echoing it back costs
  * nothing on that side.
  *
+ * sponsored.flytedesk.com also sends a `{ "status": "ping" }` (or
+ * `"Connected"` - accepted case-insensitively, since the exact literal
+ * value used by their implementation wasn't confirmed at the time this was
+ * written) call to this same endpoint immediately after registration, to
+ * report reachability back before a human has reviewed anything. Unlike
+ * Accepted/Rejected, this does not change the registration's overall
+ * status - it only records a timestamp ({@see Client::mark_ping_received()})
+ * that drives the settings page timeline's "Connected" step.
+ *
  * {@see handle()} is a pure function of its inputs (no superglobals, no
  * output, no exit) so it can be unit-tested directly; {@see maybe_dispatch()}
  * is the thin I/O wrapper that reads the real request and prints the result.
@@ -106,15 +115,24 @@ class ConfirmationController {
 			return $this->error_result( 400, 'invalid_json', __( 'Request body must be a valid JSON object.', 'flytedesk-sponsored-content' ) );
 		}
 
+		$requested_status = isset( $data['status'] ) ? (string) $data['status'] : '';
+
+		if ( in_array( strtolower( $requested_status ), array( 'ping', 'connected' ), true ) ) {
+			$this->client->mark_ping_received();
+
+			return array(
+				'status' => 200,
+				'body'   => array( 'status' => 'Connected' ),
+			);
+		}
+
 		$status_map = array(
 			'Accepted' => Client::STATUS_ACCEPTED,
 			'Rejected' => Client::STATUS_REJECTED,
 		);
 
-		$requested_status = isset( $data['status'] ) ? (string) $data['status'] : '';
-
 		if ( ! isset( $status_map[ $requested_status ] ) ) {
-			return $this->error_result( 400, 'invalid_status', __( 'status must be "Accepted" or "Rejected".', 'flytedesk-sponsored-content' ) );
+			return $this->error_result( 400, 'invalid_status', __( 'status must be "Accepted", "Rejected", or "ping".', 'flytedesk-sponsored-content' ) );
 		}
 
 		$this->client->mark_resolved( $status_map[ $requested_status ] );

@@ -41,6 +41,7 @@ class StatePresenter {
 	 *     timeline: array{
 	 *         created_at: string,
 	 *         sent_at: string,
+	 *         ping_received_at: string,
 	 *         resolved_at: string
 	 *     },
 	 *     last_error: string,
@@ -59,9 +60,10 @@ class StatePresenter {
 			'verification_token' => $this->client->get_token(),
 			'api_username'       => $this->api_credential->get_username(),
 			'timeline'           => array(
-				'created_at'  => $this->format_timestamp( $this->client->get_created_at() ),
-				'sent_at'     => $this->format_timestamp( $this->client->get_sent_at() ),
-				'resolved_at' => $this->format_timestamp( $this->client->get_resolved_at() ),
+				'created_at'       => $this->format_timestamp( $this->client->get_created_at() ),
+				'sent_at'          => $this->format_timestamp( $this->client->get_sent_at() ),
+				'ping_received_at' => $this->format_timestamp( $this->client->get_ping_received_at() ),
+				'resolved_at'      => $this->format_timestamp( $this->client->get_resolved_at() ),
 			),
 			'last_error'         => $this->client->get_last_error(),
 			'technical'          => array(

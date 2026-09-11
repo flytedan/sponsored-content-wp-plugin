@@ -7,6 +7,7 @@ declare( strict_types=1 );
 
 namespace Flytedesk\SponsoredContent\Tests\Integration;
 
+use Flytedesk\SponsoredContent\Plugin;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
 use Flytedesk\SponsoredContent\Registration\ConfirmationController;
@@ -61,6 +62,20 @@ final class RegistrationTest extends WP_UnitTestCase {
 		$this->assertSame( Client::STATUS_ACCEPTED, $client->get_status() );
 	}
 
+	public function test_confirmation_controller_records_a_real_ping_without_resolving_status(): void {
+		$client = new Client();
+		$client->ensure_initial_state();
+		$token = $client->get_token();
+
+		$controller = new ConfirmationController( $client );
+		$result     = $controller->handle( 'POST', $token, '{"status":"ping"}' );
+
+		$this->assertSame( 200, $result['status'] );
+		$this->assertSame( 'Connected', $result['body']['status'] );
+		$this->assertNotSame( '', $client->get_ping_received_at() );
+		$this->assertSame( Client::STATUS_PENDING, $client->get_status() );
+	}
+
 	public function test_confirmation_controller_rejects_wrong_token_without_changing_real_status(): void {
 		$client = new Client();
 		$client->ensure_initial_state();
@@ -109,7 +124,30 @@ final class RegistrationTest extends WP_UnitTestCase {
 			$state['timeline']['created_at']
 		);
 		$this->assertSame( '', $state['timeline']['sent_at'] );
+		$this->assertSame( '', $state['timeline']['ping_received_at'] );
 		$this->assertSame( '', $state['timeline']['resolved_at'] );
+	}
+
+	/**
+	 * Regression test: `wp plugin activate` via WP-CLI was observed not to
+	 * reliably fire `init` before running the activation hook, which meant
+	 * `Plugin::activate()`'s `flush_rewrite_rules()` call flushed a
+	 * compiled ruleset that never included
+	 * `/flytedesk-registration-confirmation` at all (a real, reproduced
+	 * 404 - see the code comment on `Plugin::activate()`). Fixed by having
+	 * `activate()` register the rule itself, directly, rather than relying
+	 * on `init` having already run earlier in the same request. This test
+	 * calls `activate()` directly and confirms the rule is present
+	 * regardless of what `init` has or hasn't already done.
+	 */
+	public function test_activate_registers_the_confirmation_rewrite_rule_itself(): void {
+		global $wp_rewrite;
+
+		$wp_rewrite->extra_rules_top = array();
+
+		Plugin::activate();
+
+		$this->assertArrayHasKey( '^flytedesk-registration-confirmation/?$', $wp_rewrite->extra_rules_top );
 	}
 
 	/**

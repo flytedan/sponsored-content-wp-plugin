@@ -106,6 +106,31 @@ final class ConfirmationControllerTest extends BrainMonkeyTestCase {
 		$this->assertSame( 'Rejected', $result['body']['status'] );
 	}
 
+	public function test_handle_accepts_lowercase_ping_status_and_records_it_without_resolving(): void {
+		Functions\when( 'get_option' )->justReturn( self::TOKEN );
+		Functions\when( 'current_time' )->justReturn( '2026-09-11 09:00:00' );
+		Functions\expect( 'update_option' )->once()->with( Client::OPTION_PING_RECEIVED_AT, '2026-09-11 09:00:00' );
+		Functions\expect( 'update_option' )->with( Client::OPTION_STATUS, \Mockery::any() )->never();
+
+		$controller = new ConfirmationController( new Client() );
+		$result     = $controller->handle( 'POST', self::TOKEN, '{"status":"ping"}' );
+
+		$this->assertSame( 200, $result['status'] );
+		$this->assertSame( 'Connected', $result['body']['status'] );
+	}
+
+	public function test_handle_accepts_connected_status_as_a_ping_alias(): void {
+		Functions\when( 'get_option' )->justReturn( self::TOKEN );
+		Functions\when( 'current_time' )->justReturn( '2026-09-11 09:00:00' );
+		Functions\expect( 'update_option' )->once()->with( Client::OPTION_PING_RECEIVED_AT, '2026-09-11 09:00:00' );
+
+		$controller = new ConfirmationController( new Client() );
+		$result     = $controller->handle( 'POST', self::TOKEN, '{"status":"Connected"}' );
+
+		$this->assertSame( 200, $result['status'] );
+		$this->assertSame( 'Connected', $result['body']['status'] );
+	}
+
 	public function test_handle_uses_constant_time_comparison_and_still_rejects_near_miss_token(): void {
 		Functions\when( 'get_option' )->justReturn( self::TOKEN );
 

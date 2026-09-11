@@ -50,6 +50,20 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$this->assertSame( Client::STATUS_PENDING, ( new Client() )->get_status() );
 	}
 
+	public function test_mark_ping_received_records_a_timestamp_without_touching_status(): void {
+		Functions\when( 'current_time' )->justReturn( '2026-09-11 09:00:00' );
+		Functions\expect( 'update_option' )->once()->with( Client::OPTION_PING_RECEIVED_AT, '2026-09-11 09:00:00' );
+		Functions\expect( 'update_option' )->with( Client::OPTION_STATUS, \Mockery::any() )->never();
+
+		( new Client() )->mark_ping_received();
+	}
+
+	public function test_get_ping_received_at_defaults_to_empty_string(): void {
+		Functions\when( 'get_option' )->justReturn( false );
+
+		$this->assertSame( '', ( new Client() )->get_ping_received_at() );
+	}
+
 	public function test_get_site_domain_parses_host_from_home_url(): void {
 		Functions\when( 'home_url' )->justReturn( 'https://publisher.example.com/blog' );
 		Functions\when( 'wp_parse_url' )->alias(
@@ -83,6 +97,7 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$this->capture_update_option( $options );
 		Functions\expect( 'delete_option' )->once()->with( Client::OPTION_LAST_ERROR );
 		Functions\expect( 'delete_option' )->once()->with( Client::OPTION_RESOLVED_AT );
+		Functions\expect( 'delete_option' )->once()->with( Client::OPTION_PING_RECEIVED_AT );
 
 		( new Client( $this->api_credential_that_issues( 'flytebot', 'freshly-issued-app-password' ) ) )->register();
 

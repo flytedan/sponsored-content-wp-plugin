@@ -64,8 +64,22 @@ final class Plugin {
 	 * which WordPress expects to run fast and which must not block
 	 * activation on sponsored.flytedesk.com being reachable), and flushes
 	 * rewrite rules so the `/flytedesk-registration-confirmation` route
-	 * {@see ConfirmationController} registers on `init` takes effect
-	 * immediately rather than only after WordPress's own periodic flush.
+	 * {@see ConfirmationController} registers takes effect immediately
+	 * rather than only after WordPress's own periodic flush.
+	 *
+	 * `ConfirmationController::add_rewrite_rule()` is called directly here,
+	 * redundantly with its own `init` registration, rather than relying on
+	 * `init` having already fired earlier in the same request by the time
+	 * this runs. That's true for a real, browser-based plugin activation
+	 * (WordPress always fires `init` before dispatching an admin action like
+	 * "activate this plugin"), but isn't guaranteed for every activation
+	 * path - `wp plugin activate` via WP-CLI was observed not to reliably
+	 * fire `init` first, which meant the rule wasn't yet in
+	 * `WP_Rewrite::$extra_rules_top` at the moment this flushed, so the
+	 * compiled rewrite rules ended up missing it entirely (a confirmed 404
+	 * on `/flytedesk-registration-confirmation` until the next unrelated
+	 * flush). Calling it explicitly here makes the flush correct regardless
+	 * of hook-ordering assumptions.
 	 */
 	public static function activate(): void {
 		Capabilities::register_role();
@@ -73,6 +87,8 @@ final class Plugin {
 		$client = new RegistrationClient();
 		$client->ensure_initial_state();
 		update_option( RegistrationClient::OPTION_NEEDS_REGISTRATION, '1' );
+
+		( new ConfirmationController( $client ) )->add_rewrite_rule();
 		flush_rewrite_rules();
 	}
 
