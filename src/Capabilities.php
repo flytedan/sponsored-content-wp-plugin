@@ -48,4 +48,14 @@ final class Capabilities {
 			)
 		);
 	}
+
+	/**
+	 * Used only by `uninstall.php` - deactivating/reactivating the plugin
+	 * must leave the role in place, since the flytebot user (recreated on
+	 * the next registration attempt after a deactivate) needs it to still
+	 * exist.
+	 */
+	public static function remove_role(): void {
+		remove_role( self::ROLE );
+	}
 }

@@ -176,6 +176,39 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$this->assertSame( 0, $options[ Client::OPTION_LAST_HTTP_STATUS ] );
 	}
 
+	public function test_delete_all_data_deletes_every_option_this_class_owns(): void {
+		$deleted = array();
+		Functions\when( 'delete_option' )->alias(
+			static function ( string $option ) use ( &$deleted ): bool {
+				$deleted[] = $option;
+
+				return true;
+			}
+		);
+
+		( new Client() )->delete_all_data();
+
+		$expected = array(
+			Client::OPTION_STATUS,
+			Client::OPTION_TOKEN,
+			Client::OPTION_LAST_ERROR,
+			Client::OPTION_CREATED_AT,
+			Client::OPTION_SENT_AT,
+			Client::OPTION_PING_RECEIVED_AT,
+			Client::OPTION_RESOLVED_AT,
+			Client::OPTION_LAST_ATTEMPT_AT,
+			Client::OPTION_LAST_HTTP_STATUS,
+			Client::OPTION_LAST_REQUEST,
+			Client::OPTION_LAST_RESPONSE_BODY,
+			Client::OPTION_NEEDS_REGISTRATION,
+		);
+
+		sort( $expected );
+		sort( $deleted );
+
+		$this->assertSame( $expected, $deleted );
+	}
+
 	private function api_credential_that_issues( string $username, string $password ): ApiCredential {
 		$api_credential = \Mockery::mock( ApiCredential::class );
 		$api_credential->shouldReceive( 'get_username' )->once()->andReturn( $username );

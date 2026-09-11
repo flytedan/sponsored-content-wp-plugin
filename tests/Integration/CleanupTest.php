@@ -1,0 +1,85 @@
+<?php
+/**
+ * @package Flytedesk\SponsoredContent
+ */
+
+declare( strict_types=1 );
+
+namespace Flytedesk\SponsoredContent\Tests\Integration;
+
+use Flytedesk\SponsoredContent\Capabilities;
+use Flytedesk\SponsoredContent\Plugin;
+use Flytedesk\SponsoredContent\Registration\ApiCredential;
+use Flytedesk\SponsoredContent\Registration\Client;
+use WP_UnitTestCase;
+
+/**
+ * Exercises {@see Plugin::deactivate()} and `uninstall.php` against a real
+ * WordPress install - proves the flytebot user, its Application Password,
+ * registration options, and the flytedesk_api role are actually removed
+ * (or, for deactivate(), deliberately left alone) rather than only
+ * asserting the right WP functions were called with the right arguments,
+ * which is all the unit suite's Brain Monkey equivalents can prove.
+ */
+final class CleanupTest extends WP_UnitTestCase {
+
+	public function test_deactivate_removes_the_flytebot_user_but_keeps_registration_state(): void {
+		$client = new Client();
+		$client->ensure_initial_state();
+		$token = $client->get_token();
+
+		( new ApiCredential() )->issue();
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'login', 'flytebot' ) );
+
+		Plugin::deactivate();
+
+		$this->assertFalse( get_user_by( 'login', 'flytebot' ) );
+		$this->assertSame( 0, (int) get_option( ApiCredential::OPTION_USER_ID, 0 ) );
+		$this->assertFalse( get_option( ApiCredential::OPTION_PASSWORD_UUID ) );
+
+		// Deactivating must not lose registration state - only uninstalling does.
+		$this->assertSame( $token, $client->get_token() );
+		$this->assertSame( Client::STATUS_PENDING, $client->get_status() );
+	}
+
+	public function test_uninstall_removes_every_trace_of_plugin_data(): void {
+		Capabilities::register_role();
+
+		$client = new Client();
+		$client->ensure_initial_state();
+
+		( new ApiCredential() )->issue();
+		$this->assertInstanceOf( \WP_User::class, get_user_by( 'login', 'flytebot' ) );
+		$this->assertNotNull( get_role( Capabilities::ROLE ) );
+
+		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+			define( 'WP_UNINSTALL_PLUGIN', 'sponsored-content-wp-plugin/sponsored-content-wp-plugin.php' );
+		}
+
+		require dirname( __DIR__, 2 ) . '/uninstall.php';
+
+		$this->assertFalse( get_user_by( 'login', 'flytebot' ) );
+		$this->assertNull( get_role( Capabilities::ROLE ) );
+		$this->assertFalse( get_option( ApiCredential::OPTION_USER_ID ) );
+		$this->assertFalse( get_option( ApiCredential::OPTION_PASSWORD_UUID ) );
+
+		foreach (
+			array(
+				Client::OPTION_STATUS,
+				Client::OPTION_TOKEN,
+				Client::OPTION_LAST_ERROR,
+				Client::OPTION_CREATED_AT,
+				Client::OPTION_SENT_AT,
+				Client::OPTION_PING_RECEIVED_AT,
+				Client::OPTION_RESOLVED_AT,
+				Client::OPTION_LAST_ATTEMPT_AT,
+				Client::OPTION_LAST_HTTP_STATUS,
+				Client::OPTION_LAST_REQUEST,
+				Client::OPTION_LAST_RESPONSE_BODY,
+				Client::OPTION_NEEDS_REGISTRATION,
+			) as $option
+		) {
+			$this->assertFalse( get_option( $option ), "Option {$option} was not removed by uninstall." );
+		}
+	}
+}

@@ -93,12 +93,23 @@ final class Plugin {
 	}
 
 	/**
-	 * Cleans up the rewrite rule this plugin added on `init` so
-	 * `/flytedesk-registration-confirmation` stops resolving once the
-	 * plugin is deactivated, rather than 404ing awkwardly through a stale
-	 * compiled rule.
+	 * Removes the low-privilege "flytebot" user {@see RegistrationApiCredential}
+	 * provisioned - deactivating is the natural point to revoke the
+	 * Application Password credential flytedesk's platform was given, the
+	 * same way any other integration's access should be pulled the moment
+	 * it's turned off - and flushes rewrite rules so
+	 * `/flytedesk-registration-confirmation` stops resolving rather than
+	 * 404ing awkwardly through a stale compiled rule.
+	 *
+	 * Deliberately does not touch registration status/token/timeline
+	 * options ({@see RegistrationClient::delete_all_data()}) - those are
+	 * only wiped on a full uninstall (see `uninstall.php`), so a
+	 * deactivate/reactivate cycle re-registers using the same verification
+	 * token instead of starting the workflow over from scratch.
 	 */
 	public static function deactivate(): void {
+		( new RegistrationApiCredential() )->delete_user();
+
 		flush_rewrite_rules();
 	}
 

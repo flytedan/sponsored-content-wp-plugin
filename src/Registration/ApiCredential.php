@@ -123,6 +123,34 @@ class ApiCredential {
 	}
 
 	/**
+	 * Removes the flytebot user this class provisioned (its Application
+	 * Passwords go with it - they live as user meta, not a separate table -
+	 * so there is nothing left to revoke independently) and forgets the
+	 * tracked user/password-uuid options, so a later {@see issue()} call
+	 * (e.g. after reactivation) provisions a fresh user rather than
+	 * resolving back to one that no longer exists.
+	 *
+	 * Used by {@see \Flytedesk\SponsoredContent\Plugin::deactivate()} and by
+	 * `uninstall.php`. `wp_delete_user()` lives in an admin-only file that
+	 * isn't loaded on every request (e.g. WP-CLI activation/deactivation
+	 * doesn't guarantee it), hence the conditional require.
+	 */
+	public function delete_user(): void {
+		if ( ! function_exists( 'wp_delete_user' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/user.php';
+		}
+
+		$user_id = (int) get_option( self::OPTION_USER_ID, 0 );
+
+		if ( $user_id > 0 ) {
+			wp_delete_user( $user_id );
+		}
+
+		delete_option( self::OPTION_USER_ID );
+		delete_option( self::OPTION_PASSWORD_UUID );
+	}
+
+	/**
 	 * `.invalid` is the IANA-reserved TLD (RFC 2606) for addresses that are
 	 * guaranteed not to resolve - used here so WordPress never has reason to
 	 * try emailing this synthetic account, on this domain or any other.

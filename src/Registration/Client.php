@@ -50,6 +50,26 @@ class Client {
 	public const OPTION_NEEDS_REGISTRATION = 'flytedesk_needs_registration';
 
 	/**
+	 * Every option this class owns, for `uninstall.php` to remove
+	 * completely via {@see delete_all_data()} - single source of truth so
+	 * that a future option this class adds can't be forgotten there.
+	 */
+	private const ALL_OPTIONS = array(
+		self::OPTION_STATUS,
+		self::OPTION_TOKEN,
+		self::OPTION_LAST_ERROR,
+		self::OPTION_CREATED_AT,
+		self::OPTION_SENT_AT,
+		self::OPTION_PING_RECEIVED_AT,
+		self::OPTION_RESOLVED_AT,
+		self::OPTION_LAST_ATTEMPT_AT,
+		self::OPTION_LAST_HTTP_STATUS,
+		self::OPTION_LAST_REQUEST,
+		self::OPTION_LAST_RESPONSE_BODY,
+		self::OPTION_NEEDS_REGISTRATION,
+	);
+
+	/**
 	 * The documented contract names this endpoint as
 	 * `sponsored.flytedesk.com/functions/v1/wp-plugin-register`, but that
 	 * host only serves the marketing site (a static Netlify-hosted SPA) -
@@ -193,6 +213,18 @@ class Client {
 		$host = wp_parse_url( home_url(), PHP_URL_HOST );
 
 		return is_string( $host ) ? $host : '';
+	}
+
+	/**
+	 * Removes every option this class stores. Used only by `uninstall.php`
+	 * - never by {@see \Flytedesk\SponsoredContent\Plugin::deactivate()},
+	 * which must leave registration state intact so a deactivate/reactivate
+	 * cycle doesn't lose it.
+	 */
+	public function delete_all_data(): void {
+		foreach ( self::ALL_OPTIONS as $option ) {
+			delete_option( $option );
+		}
 	}
 
 	/**

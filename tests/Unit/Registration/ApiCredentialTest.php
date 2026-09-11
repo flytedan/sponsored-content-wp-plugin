@@ -205,4 +205,26 @@ final class ApiCredentialTest extends BrainMonkeyTestCase {
 
 		( new ApiCredential( $issuer ) )->issue();
 	}
+
+	public function test_delete_user_deletes_the_tracked_user_and_forgets_both_options(): void {
+		Functions\when( 'get_option' )->alias(
+			static fn ( string $key ) => ApiCredential::OPTION_USER_ID === $key ? 7 : ''
+		);
+
+		Functions\expect( 'wp_delete_user' )->once()->with( 7 )->andReturn( true );
+		Functions\expect( 'delete_option' )->once()->with( ApiCredential::OPTION_USER_ID );
+		Functions\expect( 'delete_option' )->once()->with( ApiCredential::OPTION_PASSWORD_UUID );
+
+		( new ApiCredential() )->delete_user();
+	}
+
+	public function test_delete_user_does_not_call_wp_delete_user_when_no_user_is_tracked(): void {
+		Functions\when( 'get_option' )->justReturn( 0 );
+
+		Functions\expect( 'wp_delete_user' )->never()->andReturn( true );
+		Functions\expect( 'delete_option' )->once()->with( ApiCredential::OPTION_USER_ID );
+		Functions\expect( 'delete_option' )->once()->with( ApiCredential::OPTION_PASSWORD_UUID );
+
+		( new ApiCredential() )->delete_user();
+	}
 }

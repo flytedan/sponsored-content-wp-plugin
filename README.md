@@ -6,6 +6,7 @@ A standalone WordPress plugin that lets the flytedesk platform push sponsored/na
 
 ```
 sponsored-content-wp-plugin.php   Plugin header + Composer autoload + activation/deactivation hooks + Plugin::instance()->boot()
+uninstall.php                     Removes all plugin data on delete (see "Notes on uninstall" below)
 src/
 ├── Plugin.php                    Orchestrator: wires everything below to WP hooks; owns activate()/deactivate()
 ├── Capabilities.php              The flytedesk_manage_sponsored_content capability + flytedesk_api role
@@ -348,4 +349,6 @@ sponsored-content-wp-plugin/
 
 ## Notes on uninstall
 
-Deactivating or deleting the plugin does not remove any `fdsc_sponsored_post` posts - content is left in place on uninstall, per standard WordPress plugin convention. There is no `uninstall.php`.
+* **Deactivating** the plugin removes the `flytebot` user and its Application Password (`Plugin::deactivate()`, via `Registration\ApiCredential::delete_user()`) - the same way any other integration's access should be pulled the moment it's turned off. Registration status, the verification token, and the rest of the timeline are left alone, so reactivating re-registers using the same token instead of starting the workflow over.
+* **Deleting** the plugin (via `uninstall.php`) removes everything above plus every `flytedesk_*` option and the `flytedesk_api` role - a clean slate, as if the plugin had never been installed.
+* Neither step removes any `fdsc_sponsored_post` posts - content already published to the site stays in place, per standard WordPress plugin convention. Removing a connector shouldn't silently delete a publisher's live articles.
