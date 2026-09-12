@@ -230,7 +230,6 @@ final class ClientTest extends BrainMonkeyTestCase {
 			Client::OPTION_LAST_HTTP_STATUS,
 			Client::OPTION_LAST_REQUEST,
 			Client::OPTION_LAST_RESPONSE_BODY,
-			Client::OPTION_NEEDS_REGISTRATION,
 		);
 
 		sort( $expected );

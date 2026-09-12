@@ -12,6 +12,7 @@ namespace Flytedesk\SponsoredContent\Admin;
 use Flytedesk\SponsoredContent\PostType;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
+use Flytedesk\SponsoredContent\Registration\Consent;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
 use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use Flytedesk\SponsoredContent\Seo\Resolver;
@@ -21,21 +22,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Submenu page under the Sponsored Content post type: a live-updating
- * timeline (Pending -> Awaiting Response -> Accepted/Rejected), a Status
- * tab with the Register Now / Re-register button, a Technical Details tab
- * showing the last registration request/response, and an About tab
- * explaining the Sponsored Content Network to the publisher. All dynamic
- * rendering after the first paint is done client-side by
- * `assets/js/registration-admin.js`, polling
+ * Submenu page under the Sponsored Content post type. Before {@see Consent}
+ * has been granted, renders only a plain-language explanation of what
+ * registering does and a "Connect to flytedesk" button - nothing is sent
+ * anywhere until a human explicitly clicks it. Afterward, renders the full
+ * dashboard: a live-updating timeline (Pending -> Connected -> Awaiting
+ * Response -> Accepted/Rejected -> Verified), a Status tab with the
+ * Re-register button, a Technical Details tab showing the last registration
+ * request/response, and an About tab explaining the Sponsored Content
+ * Network to the publisher. All dynamic rendering after the first paint is
+ * done client-side by `assets/js/registration-admin.js`, polling
  * {@see RegistrationAjaxController} every few seconds; this class's PHP
  * only needs to render the initial shell + state once per page load.
- *
- * Also fires the one-time automatic registration attempt that
- * {@see \Flytedesk\SponsoredContent\Plugin::activate()} schedules - deferred
- * to the next `admin_init` after activation rather than run inside the
- * activation hook itself, so a slow or failing registration request can
- * never block plugin activation.
  */
 class RegistrationSettingsPage {
 
@@ -47,22 +45,24 @@ class RegistrationSettingsPage {
 
 	private Resolver $seo_resolver;
 
+	private Consent $consent;
+
 	private ApiCredential $api_credential;
 
 	private StatePresenter $state_presenter;
 
 	private string $hook_suffix = '';
 
-	public function __construct( Client $client, Resolver $seo_resolver, ?ApiCredential $api_credential = null, ?StatePresenter $state_presenter = null ) {
+	public function __construct( Client $client, Resolver $seo_resolver, Consent $consent, ?ApiCredential $api_credential = null, ?StatePresenter $state_presenter = null ) {
 		$this->client          = $client;
 		$this->seo_resolver    = $seo_resolver;
+		$this->consent         = $consent;
 		$this->api_credential  = $api_credential ?? new ApiCredential();
-		$this->state_presenter = $state_presenter ?? new StatePresenter( $this->client, $this->api_credential, new VerificationTracker() );
+		$this->state_presenter = $state_presenter ?? new StatePresenter( $this->client, $this->api_credential, new VerificationTracker(), $this->consent );
 	}
 
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
-		add_action( 'admin_init', array( $this, 'maybe_run_automatic_registration' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
@@ -79,21 +79,6 @@ class RegistrationSettingsPage {
 		if ( is_string( $hook_suffix ) ) {
 			$this->hook_suffix = $hook_suffix;
 		}
-	}
-
-	/**
-	 * Consumes the one-shot flag `Plugin::activate()` sets, so the automatic
-	 * registration attempt fires exactly once per activation, on the first
-	 * admin page load afterward - not on every `admin_init`, and not
-	 * competing with the manual "Register Now" button's own attempts.
-	 */
-	public function maybe_run_automatic_registration(): void {
-		if ( '1' !== get_option( Client::OPTION_NEEDS_REGISTRATION, '' ) ) {
-			return;
-		}
-
-		delete_option( Client::OPTION_NEEDS_REGISTRATION );
-		$this->client->register();
 	}
 
 	public function enqueue_assets( string $hook ): void {
@@ -127,18 +112,20 @@ class RegistrationSettingsPage {
 				'nonce'        => wp_create_nonce( self::NONCE_ACTION ),
 				'initialState' => $this->state_presenter->to_array(),
 				'strings'      => array(
-					'registerNow'       => __( 'Register Now', 'flytedesk-sponsored-content' ),
-					'reregister'        => __( 'Re-register', 'flytedesk-sponsored-content' ),
-					'sending'           => __( 'Sending…', 'flytedesk-sponsored-content' ),
-					'genericError'      => __( 'Something went wrong. Please try again.', 'flytedesk-sponsored-content' ),
-					'acceptedRejected'  => __( 'Accepted / Rejected', 'flytedesk-sponsored-content' ),
-					'accepted'          => __( 'Accepted', 'flytedesk-sponsored-content' ),
-					'rejected'          => __( 'Rejected', 'flytedesk-sponsored-content' ),
-					'noAttemptsYet'     => __( 'No attempts yet.', 'flytedesk-sponsored-content' ),
-					'networkError'      => __( 'Network error (no response received)', 'flytedesk-sponsored-content' ),
-					'emptyResponseBody' => __( '(empty response body)', 'flytedesk-sponsored-content' ),
-					'notYetVerified'    => __( 'Not yet verified', 'flytedesk-sponsored-content' ),
-					'statusLabels'      => array(
+					'registerNow'        => __( 'Register Now', 'flytedesk-sponsored-content' ),
+					'reregister'         => __( 'Re-register', 'flytedesk-sponsored-content' ),
+					'sending'            => __( 'Sending…', 'flytedesk-sponsored-content' ),
+					'genericError'       => __( 'Something went wrong. Please try again.', 'flytedesk-sponsored-content' ),
+					'acceptedRejected'   => __( 'Accepted / Rejected', 'flytedesk-sponsored-content' ),
+					'accepted'           => __( 'Accepted', 'flytedesk-sponsored-content' ),
+					'rejected'           => __( 'Rejected', 'flytedesk-sponsored-content' ),
+					'noAttemptsYet'      => __( 'No attempts yet.', 'flytedesk-sponsored-content' ),
+					'networkError'       => __( 'Network error (no response received)', 'flytedesk-sponsored-content' ),
+					'emptyResponseBody'  => __( '(empty response body)', 'flytedesk-sponsored-content' ),
+					'notYetVerified'     => __( 'Not yet verified', 'flytedesk-sponsored-content' ),
+					'connectToFlytedesk' => __( 'Connect to flytedesk', 'flytedesk-sponsored-content' ),
+					'connecting'         => __( 'Connecting…', 'flytedesk-sponsored-content' ),
+					'statusLabels'       => array(
 						Client::STATUS_PENDING  => __( 'Pending', 'flytedesk-sponsored-content' ),
 						Client::STATUS_SENT     => __( 'Registration Sent', 'flytedesk-sponsored-content' ),
 						Client::STATUS_ACCEPTED => __( 'Accepted', 'flytedesk-sponsored-content' ),
@@ -169,6 +156,11 @@ class RegistrationSettingsPage {
 			return;
 		}
 
+		if ( ! $this->consent->has_been_granted() ) {
+			$this->render_consent_gate();
+			return;
+		}
+
 		$state = $this->state_presenter->to_array();
 		?>
 		<div class="wrap flytedesk-registration-page">
@@ -178,17 +170,7 @@ class RegistrationSettingsPage {
 				</div>
 			</noscript>
 
-			<div class="flytedesk-header">
-				<img
-					src="<?php echo esc_url( FLYTEDESK_SPONSORED_CONTENT_URL . 'assets/images/flytedesk-logo-dark-bg.png' ); ?>"
-					alt="flytedesk"
-					class="flytedesk-header-logo"
-				/>
-				<div class="flytedesk-header-text">
-					<h1><?php esc_html_e( 'Sponsored Content Registration', 'flytedesk-sponsored-content' ); ?></h1>
-					<p><?php esc_html_e( 'Connect this site to the flytedesk Sponsored Content Network.', 'flytedesk-sponsored-content' ); ?></p>
-				</div>
-			</div>
+			<?php $this->render_header(); ?>
 
 			<?php $this->render_seo_notice(); ?>
 
@@ -206,6 +188,61 @@ class RegistrationSettingsPage {
 				<?php $this->render_status_panel( $state ); ?>
 				<?php $this->render_technical_panel(); ?>
 				<?php $this->render_about_panel(); ?>
+			</div>
+		</div>
+		<?php
+	}
+
+	private function render_header(): void {
+		?>
+		<div class="flytedesk-header">
+			<img
+				src="<?php echo esc_url( FLYTEDESK_SPONSORED_CONTENT_URL . 'assets/images/flytedesk-logo-dark-bg.png' ); ?>"
+				alt="flytedesk"
+				class="flytedesk-header-logo"
+			/>
+			<div class="flytedesk-header-text">
+				<h1><?php esc_html_e( 'Sponsored Content Registration', 'flytedesk-sponsored-content' ); ?></h1>
+				<p><?php esc_html_e( 'Connect this site to the flytedesk Sponsored Content Network.', 'flytedesk-sponsored-content' ); ?></p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Shown instead of the dashboard until {@see Consent::has_been_granted()}
+	 * is true. WordPress.org's Plugin Directory guidelines require plugins
+	 * not contact external servers without a human's explicit, informed
+	 * opt-in - activating the plugin isn't itself that consent - so nothing
+	 * is sent to sponsored.flytedesk.com until this exact button is clicked.
+	 * The click both records who authorized it ({@see Consent::grant()}) and
+	 * immediately sends the registration that authorization covers, so
+	 * getting started is one click, not a consent step followed by a
+	 * separate registration step.
+	 */
+	private function render_consent_gate(): void {
+		?>
+		<div class="wrap flytedesk-registration-page">
+			<?php $this->render_header(); ?>
+
+			<div class="flytedesk-consent-card">
+				<h2><?php esc_html_e( 'Connect this site to flytedesk', 'flytedesk-sponsored-content' ); ?></h2>
+				<p><?php esc_html_e( 'Before this site can receive sponsored content, it needs to register with flytedesk\'s platform. Clicking "Connect to flytedesk" below will:', 'flytedesk-sponsored-content' ); ?></p>
+				<ul class="flytedesk-consent-list">
+					<li><?php esc_html_e( 'Create a dedicated, low-privilege WordPress user ("flytebot") on this site, used only by this plugin\'s own REST API - nothing else on this site.', 'flytedesk-sponsored-content' ); ?></li>
+					<li><?php esc_html_e( 'Issue that user an Application Password and send it, along with this site\'s domain and title, to sponsored.flytedesk.com.', 'flytedesk-sponsored-content' ); ?></li>
+					<li><?php esc_html_e( 'Let a human at flytedesk review this registration - nothing is published to this site unless and until they approve it.', 'flytedesk-sponsored-content' ); ?></li>
+				</ul>
+				<p class="flytedesk-field-description"><?php esc_html_e( 'Nothing is sent anywhere, and no user is created, until you click the button below. Who clicked it and when is recorded on this site for your own records.', 'flytedesk-sponsored-content' ); ?></p>
+
+				<button type="button" class="flytedesk-button" id="flytedesk-consent-button">
+					<span class="flytedesk-spinner"></span>
+					<span class="flytedesk-button-label"><?php esc_html_e( 'Connect to flytedesk', 'flytedesk-sponsored-content' ); ?></span>
+				</button>
+
+				<div class="flytedesk-notice is-error" data-role="consent-error" hidden>
+					<span class="flytedesk-notice-text"></span>
+				</div>
 			</div>
 		</div>
 		<?php
@@ -352,6 +389,10 @@ class RegistrationSettingsPage {
 		?>
 		<div class="flytedesk-tab-panel" data-tab-panel="technical" id="flytedesk-technical-panel" hidden>
 			<div class="flytedesk-tech-block">
+				<h3><?php esc_html_e( 'Authorized by', 'flytedesk-sponsored-content' ); ?></h3>
+				<p class="flytedesk-empty-state" data-field="consent_summary"></p>
+			</div>
+			<div class="flytedesk-tech-block">
 				<h3><?php esc_html_e( 'Last attempt', 'flytedesk-sponsored-content' ); ?></h3>
 				<p class="flytedesk-empty-state" data-field="last_attempt_at"></p>
 			</div>
@@ -389,8 +430,8 @@ class RegistrationSettingsPage {
 			<ol class="flytedesk-how-it-works">
 				<li>
 					<div>
-						<strong><?php esc_html_e( 'You registered automatically.', 'flytedesk-sponsored-content' ); ?></strong>
-						<?php esc_html_e( 'Activating this plugin generated a secure credential for your site and sent it to flytedesk - nothing to copy or configure by hand.', 'flytedesk-sponsored-content' ); ?>
+						<strong><?php esc_html_e( 'You connected this site.', 'flytedesk-sponsored-content' ); ?></strong>
+						<?php esc_html_e( 'Clicking "Connect to flytedesk" generated a secure credential for your site and sent it to flytedesk - nothing to copy or configure by hand, and nothing sent anywhere without that explicit click.', 'flytedesk-sponsored-content' ); ?>
 					</div>
 				</li>
 				<li>

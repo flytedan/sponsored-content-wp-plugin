@@ -10,6 +10,7 @@ namespace Flytedesk\SponsoredContent\Tests\Unit\Registration;
 use Brain\Monkey\Functions;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
+use Flytedesk\SponsoredContent\Registration\Consent;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
 use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use Flytedesk\SponsoredContent\Tests\Unit\BrainMonkeyTestCase;
@@ -41,12 +42,17 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$verification_tracker->shouldReceive( 'get_verified_at' )->once()->andReturn( '' );
 		$verification_tracker->shouldReceive( 'is_fully_verified' )->once()->andReturn( false );
 
+		$consent = \Mockery::mock( Consent::class );
+		$consent->shouldReceive( 'has_been_granted' )->once()->andReturn( true );
+		$consent->shouldReceive( 'get_granted_at' )->once()->andReturn( '2026-09-02 10:00:00' );
+		$consent->shouldReceive( 'get_granted_by_login' )->once()->andReturn( 'admin' );
+
 		Functions\when( 'get_option' )->justReturn( 'F j, Y g:i a' );
 		Functions\when( 'mysql2date' )->alias(
 			static fn( string $format, string $date ) => 'formatted(' . $date . ')'
 		);
 
-		$state = ( new StatePresenter( $client, $api_credential, $verification_tracker ) )->to_array();
+		$state = ( new StatePresenter( $client, $api_credential, $verification_tracker, $consent ) )->to_array();
 
 		$this->assertSame( Client::STATUS_SENT, $state['status'] );
 		$this->assertSame( 'publisher.example.com', $state['site_domain'] );
@@ -66,6 +72,9 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$this->assertSame( '', $state['verification']['delete_at'] );
 		$this->assertSame( '', $state['verification']['verified_at'] );
 		$this->assertFalse( $state['verification']['all_verified'] );
+		$this->assertTrue( $state['consent']['granted'] );
+		$this->assertSame( 'formatted(2026-09-02 10:00:00)', $state['consent']['granted_at'] );
+		$this->assertSame( 'admin', $state['consent']['granted_by'] );
 	}
 
 	public function test_empty_timestamps_are_not_passed_through_mysql2date(): void {
@@ -93,9 +102,14 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$verification_tracker->shouldReceive( 'get_verified_at' )->andReturn( '' );
 		$verification_tracker->shouldReceive( 'is_fully_verified' )->andReturn( false );
 
+		$consent = \Mockery::mock( Consent::class );
+		$consent->shouldReceive( 'has_been_granted' )->andReturn( false );
+		$consent->shouldReceive( 'get_granted_at' )->andReturn( '' );
+		$consent->shouldReceive( 'get_granted_by_login' )->andReturn( '' );
+
 		Functions\expect( 'mysql2date' )->never();
 
-		$state = ( new StatePresenter( $client, $api_credential, $verification_tracker ) )->to_array();
+		$state = ( new StatePresenter( $client, $api_credential, $verification_tracker, $consent ) )->to_array();
 
 		$this->assertSame( '', $state['timeline']['created_at'] );
 		$this->assertSame( '', $state['timeline']['sent_at'] );
@@ -132,12 +146,17 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$verification_tracker->shouldReceive( 'get_verified_at' )->andReturn( '2026-09-11 09:10:00' );
 		$verification_tracker->shouldReceive( 'is_fully_verified' )->andReturn( true );
 
+		$consent = \Mockery::mock( Consent::class );
+		$consent->shouldReceive( 'has_been_granted' )->andReturn( true );
+		$consent->shouldReceive( 'get_granted_at' )->andReturn( '2026-09-11 08:00:00' );
+		$consent->shouldReceive( 'get_granted_by_login' )->andReturn( 'admin' );
+
 		Functions\when( 'get_option' )->justReturn( 'F j, Y g:i a' );
 		Functions\when( 'mysql2date' )->alias(
 			static fn( string $format, string $date ) => 'formatted(' . $date . ')'
 		);
 
-		$state = ( new StatePresenter( $client, $api_credential, $verification_tracker ) )->to_array();
+		$state = ( new StatePresenter( $client, $api_credential, $verification_tracker, $consent ) )->to_array();
 
 		$this->assertSame( 'formatted(2026-09-11 09:00:00)', $state['verification']['create_at'] );
 		$this->assertSame( 'formatted(2026-09-11 09:05:00)', $state['verification']['update_at'] );

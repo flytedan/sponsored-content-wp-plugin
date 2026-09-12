@@ -74,6 +74,45 @@
 	margin: 0;
 }
 
+/* ---------- Consent gate ---------- */
+
+.flytedesk-consent-card {
+	background: #fff;
+	border: 1px solid var(--fd-border);
+	border-radius: var(--fd-radius);
+	padding: 32px;
+	max-width: 640px;
+}
+
+.flytedesk-consent-card h2 {
+	margin: 0 0 12px;
+	font-size: 17px;
+	color: var(--fd-navy);
+}
+
+.flytedesk-consent-card > p {
+	margin: 0 0 14px;
+	font-size: 13.5px;
+	line-height: 1.6;
+	color: var(--fd-text);
+}
+
+.flytedesk-consent-list {
+	margin: 0 0 16px;
+	padding-left: 20px;
+	font-size: 13.5px;
+	line-height: 1.7;
+	color: var(--fd-text);
+}
+
+.flytedesk-consent-list li {
+	margin-bottom: 8px;
+}
+
+.flytedesk-consent-card .flytedesk-field-description {
+	margin-bottom: 20px;
+}
+
 /* ---------- Timeline ---------- */
 
 .flytedesk-timeline {

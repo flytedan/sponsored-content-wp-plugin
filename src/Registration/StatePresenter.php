@@ -29,10 +29,13 @@ class StatePresenter {
 
 	private VerificationTracker $verification_tracker;
 
-	public function __construct( Client $client, ApiCredential $api_credential, VerificationTracker $verification_tracker ) {
+	private Consent $consent;
+
+	public function __construct( Client $client, ApiCredential $api_credential, VerificationTracker $verification_tracker, Consent $consent ) {
 		$this->client               = $client;
 		$this->api_credential       = $api_credential;
 		$this->verification_tracker = $verification_tracker;
+		$this->consent              = $consent;
 	}
 
 	/**
@@ -60,6 +63,11 @@ class StatePresenter {
 	 *         delete_at: string,
 	 *         verified_at: string,
 	 *         all_verified: bool
+	 *     },
+	 *     consent: array{
+	 *         granted: bool,
+	 *         granted_at: string,
+	 *         granted_by: string
 	 *     }
 	 * }
 	 */
@@ -88,6 +96,11 @@ class StatePresenter {
 				'delete_at'    => $this->format_timestamp( $this->verification_tracker->get_delete_verified_at() ),
 				'verified_at'  => $this->format_timestamp( $this->verification_tracker->get_verified_at() ),
 				'all_verified' => $this->verification_tracker->is_fully_verified(),
+			),
+			'consent'            => array(
+				'granted'    => $this->consent->has_been_granted(),
+				'granted_at' => $this->format_timestamp( $this->consent->get_granted_at() ),
+				'granted_by' => $this->consent->get_granted_by_login(),
 			),
 		);
 	}

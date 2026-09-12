@@ -11,6 +11,7 @@ use Flytedesk\SponsoredContent\Capabilities;
 use Flytedesk\SponsoredContent\Plugin;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
+use Flytedesk\SponsoredContent\Registration\Consent;
 use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use WP_UnitTestCase;
 
@@ -29,6 +30,10 @@ final class CleanupTest extends WP_UnitTestCase {
 		$client->ensure_initial_state();
 		$token = $client->get_token();
 
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$consent  = new Consent();
+		$consent->grant( $admin_id );
+
 		( new ApiCredential() )->issue();
 		$this->assertInstanceOf( \WP_User::class, get_user_by( 'login', 'flytebot' ) );
 
@@ -41,6 +46,9 @@ final class CleanupTest extends WP_UnitTestCase {
 		// Deactivating must not lose registration state - only uninstalling does.
 		$this->assertSame( $token, $client->get_token() );
 		$this->assertSame( Client::STATUS_PENDING, $client->get_status() );
+
+		// Nor should it revoke consent - re-activating shouldn't re-ask for it.
+		$this->assertTrue( $consent->has_been_granted() );
 	}
 
 	public function test_uninstall_removes_every_trace_of_plugin_data(): void {
@@ -58,6 +66,11 @@ final class CleanupTest extends WP_UnitTestCase {
 		$verification_tracker->mark_update_verified();
 		$verification_tracker->mark_delete_verified();
 		$this->assertTrue( $verification_tracker->is_fully_verified() );
+
+		$admin_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$consent  = new Consent();
+		$consent->grant( $admin_id );
+		$this->assertTrue( $consent->has_been_granted() );
 
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 			define( 'WP_UNINSTALL_PLUGIN', 'sponsored-content-wp-plugin/sponsored-content-wp-plugin.php' );
@@ -83,15 +96,19 @@ final class CleanupTest extends WP_UnitTestCase {
 				Client::OPTION_LAST_HTTP_STATUS,
 				Client::OPTION_LAST_REQUEST,
 				Client::OPTION_LAST_RESPONSE_BODY,
-				Client::OPTION_NEEDS_REGISTRATION,
 				VerificationTracker::OPTION_CREATE_VERIFIED_AT,
 				VerificationTracker::OPTION_UPDATE_VERIFIED_AT,
 				VerificationTracker::OPTION_DELETE_VERIFIED_AT,
+				Consent::OPTION_GRANTED_AT,
+				Consent::OPTION_GRANTED_BY_USER_ID,
+				Consent::OPTION_GRANTED_BY_LOGIN,
+				Consent::OPTION_GRANTED_BY_IP,
 			) as $option
 		) {
 			$this->assertFalse( get_option( $option ), "Option {$option} was not removed by uninstall." );
 		}
 
 		$this->assertFalse( ( new VerificationTracker() )->is_fully_verified() );
+		$this->assertFalse( $consent->has_been_granted() );
 	}
 }

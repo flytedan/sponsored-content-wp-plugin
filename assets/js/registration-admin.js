@@ -25,12 +25,23 @@
 		registerButton: document.getElementById( 'flytedesk-register-button' ),
 		pollIndicator: document.getElementById( 'flytedesk-poll-indicator' ),
 		verificationBreakdown: document.getElementById( 'flytedesk-verification-breakdown' ),
+		consentButton: document.getElementById( 'flytedesk-consent-button' ),
 	};
 
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initTabs();
-		renderState( config.initialState );
-		maybeStartPolling( config.initialState );
+
+		if ( els.consentButton ) {
+			els.consentButton.addEventListener( 'click', onGrantConsentClick );
+		}
+
+		// The consent gate has none of the dashboard elements below (no
+		// point polling a page where nothing can change until the user
+		// clicks "Connect to flytedesk").
+		if ( els.timeline ) {
+			renderState( config.initialState );
+			maybeStartPolling( config.initialState );
+		}
 
 		if ( els.registerButton ) {
 			els.registerButton.addEventListener( 'click', onRegisterClick );
@@ -134,6 +145,49 @@
 		}
 		if ( els.pollIndicator ) {
 			els.pollIndicator.hidden = true;
+		}
+	}
+
+	/**
+	 * The consent gate's only action: records consent and sends the first
+	 * registration in one click. On success, reloads the page - the gate
+	 * and the full dashboard are different server-rendered shells, so a
+	 * reload is simpler and more robust than duplicating the dashboard's
+	 * markup here in JS just to swap it in without one.
+	 */
+	function onGrantConsentClick() {
+		var button = els.consentButton;
+		button.disabled = true;
+		button.classList.add( 'is-loading' );
+		setConsentButtonLabel( config.strings.connecting );
+
+		fetchState( 'flytedesk_grant_consent' )
+			.then( function () {
+				window.location.reload();
+			} )
+			.catch( function ( error ) {
+				renderConsentError( error.message || config.strings.genericError );
+				button.disabled = false;
+				button.classList.remove( 'is-loading' );
+				setConsentButtonLabel( config.strings.connectToFlytedesk );
+			} );
+	}
+
+	function renderConsentError( message ) {
+		var errorBox = document.querySelector( '[data-role="consent-error"]' );
+		if ( errorBox ) {
+			errorBox.hidden = false;
+			errorBox.querySelector( '.flytedesk-notice-text' ).textContent = message;
+		}
+	}
+
+	function setConsentButtonLabel( text ) {
+		if ( ! els.consentButton ) {
+			return;
+		}
+		var label = els.consentButton.querySelector( '.flytedesk-button-label' );
+		if ( label ) {
+			label.textContent = text;
 		}
 	}
 
@@ -320,6 +374,13 @@
 		}
 
 		var tech = state.technical;
+
+		var consentField = els.technicalPanel.querySelector( '[data-field="consent_summary"]' );
+		if ( consentField ) {
+			consentField.textContent = ( state.consent && state.consent.granted && state.consent.granted_by )
+				? state.consent.granted_by + ' on ' + state.consent.granted_at
+				: '';
+		}
 
 		var attemptField = els.technicalPanel.querySelector( '[data-field="last_attempt_at"]' );
 		if ( attemptField ) {

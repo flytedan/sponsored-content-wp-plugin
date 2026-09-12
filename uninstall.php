@@ -33,4 +33,5 @@ require_once __DIR__ . '/vendor/autoload.php';
 ( new Registration\ApiCredential() )->delete_user();
 ( new Registration\Client() )->delete_all_data();
 ( new Registration\VerificationTracker() )->delete_all_data();
+( new Registration\Consent() )->delete_all_data();
 Capabilities::remove_role();

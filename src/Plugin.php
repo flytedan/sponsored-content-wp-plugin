@@ -14,6 +14,7 @@ use Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage;
 use Flytedesk\SponsoredContent\Registration\ApiCredential as RegistrationApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client as RegistrationClient;
 use Flytedesk\SponsoredContent\Registration\ConfirmationController;
+use Flytedesk\SponsoredContent\Registration\Consent;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
 use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use Flytedesk\SponsoredContent\Rest\Controller;
@@ -58,15 +59,18 @@ final class Plugin {
 	/**
 	 * Runs on plugin activation: seeds the registration option state (token
 	 * + initial "pending" status, generated once and left alone on
-	 * reactivation), flags that an automatic registration attempt should
-	 * run on the next admin page load (deferred - see
-	 * {@see \Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage::maybe_run_automatic_registration()}
-	 * - rather than making a network request inside this activation hook,
-	 * which WordPress expects to run fast and which must not block
-	 * activation on sponsored.flytedesk.com being reachable), and flushes
-	 * rewrite rules so the `/flytedesk-registration-confirmation` route
-	 * {@see ConfirmationController} registers takes effect immediately
-	 * rather than only after WordPress's own periodic flush.
+	 * reactivation) and flushes rewrite rules so the
+	 * `/flytedesk-registration-confirmation` route {@see ConfirmationController}
+	 * registers takes effect immediately rather than only after WordPress's
+	 * own periodic flush.
+	 *
+	 * Deliberately does NOT contact sponsored.flytedesk.com or send anything
+	 * anywhere - that only ever happens after a human explicitly clicks
+	 * "Connect to flytedesk" on the Registration page (see
+	 * {@see \Flytedesk\SponsoredContent\Registration\Consent} and
+	 * {@see \Flytedesk\SponsoredContent\Admin\RegistrationAjaxController::handle_grant_consent()}).
+	 * Activating a plugin is not itself informed consent to transmit this
+	 * site's data to a third party.
 	 *
 	 * `ConfirmationController::add_rewrite_rule()` is called directly here,
 	 * redundantly with its own `init` registration, rather than relying on
@@ -87,7 +91,6 @@ final class Plugin {
 
 		$client = new RegistrationClient();
 		$client->ensure_initial_state();
-		update_option( RegistrationClient::OPTION_NEEDS_REGISTRATION, '1' );
 
 		( new ConfirmationController( $client ) )->add_rewrite_rule();
 		flush_rewrite_rules();
@@ -122,10 +125,11 @@ final class Plugin {
 		$registration_api_credential     = new RegistrationApiCredential();
 		$this->registration_client       = new RegistrationClient( $registration_api_credential, $verification_tracker );
 		$this->registration_confirmation = new ConfirmationController( $this->registration_client );
+		$consent                         = new Consent();
 
-		$registration_state_presenter     = new StatePresenter( $this->registration_client, $registration_api_credential, $verification_tracker );
-		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client, $this->seo_resolver, $registration_api_credential, $registration_state_presenter );
-		$this->registration_ajax          = new RegistrationAjaxController( $this->registration_client, $registration_state_presenter );
+		$registration_state_presenter     = new StatePresenter( $this->registration_client, $registration_api_credential, $verification_tracker, $consent );
+		$this->registration_settings_page = new RegistrationSettingsPage( $this->registration_client, $this->seo_resolver, $consent, $registration_api_credential, $registration_state_presenter );
+		$this->registration_ajax          = new RegistrationAjaxController( $this->registration_client, $consent, $registration_state_presenter );
 	}
 
 	/**

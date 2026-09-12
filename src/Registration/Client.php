@@ -47,7 +47,6 @@ class Client {
 	public const OPTION_LAST_HTTP_STATUS   = 'flytedesk_registration_last_http_status';
 	public const OPTION_LAST_REQUEST       = 'flytedesk_registration_last_request';
 	public const OPTION_LAST_RESPONSE_BODY = 'flytedesk_registration_last_response_body';
-	public const OPTION_NEEDS_REGISTRATION = 'flytedesk_needs_registration';
 
 	/**
 	 * Every option this class owns, for `uninstall.php` to remove
@@ -66,7 +65,6 @@ class Client {
 		self::OPTION_LAST_HTTP_STATUS,
 		self::OPTION_LAST_REQUEST,
 		self::OPTION_LAST_RESPONSE_BODY,
-		self::OPTION_NEEDS_REGISTRATION,
 	);
 
 	/**

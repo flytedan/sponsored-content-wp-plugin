@@ -11,6 +11,7 @@ use Flytedesk\SponsoredContent\Plugin;
 use Flytedesk\SponsoredContent\Registration\ApiCredential;
 use Flytedesk\SponsoredContent\Registration\Client;
 use Flytedesk\SponsoredContent\Registration\ConfirmationController;
+use Flytedesk\SponsoredContent\Registration\Consent;
 use Flytedesk\SponsoredContent\Registration\StatePresenter;
 use Flytedesk\SponsoredContent\Registration\VerificationTracker;
 use WP_UnitTestCase;
@@ -117,7 +118,7 @@ final class RegistrationTest extends WP_UnitTestCase {
 		$client = new Client();
 		$client->ensure_initial_state();
 
-		$state = ( new StatePresenter( $client, new ApiCredential(), new VerificationTracker() ) )->to_array();
+		$state = ( new StatePresenter( $client, new ApiCredential(), new VerificationTracker(), new Consent() ) )->to_array();
 
 		$this->assertNotSame( '', $state['timeline']['created_at'] );
 		$this->assertSame(
@@ -160,6 +161,25 @@ final class RegistrationTest extends WP_UnitTestCase {
 	 */
 	public function test_ajax_actions_are_registered(): void {
 		$this->assertNotFalse( has_action( 'wp_ajax_flytedesk_registration_status' ) );
+		$this->assertNotFalse( has_action( 'wp_ajax_flytedesk_grant_consent' ) );
 		$this->assertNotFalse( has_action( 'wp_ajax_flytedesk_register' ) );
+	}
+
+	public function test_consent_grant_persists_a_real_user_login_and_timestamp(): void {
+		$admin_id = self::factory()->user->create(
+			array(
+				'role'       => 'administrator',
+				'user_login' => 'site-owner',
+			)
+		);
+
+		$consent = new Consent();
+		$this->assertFalse( $consent->has_been_granted() );
+
+		$consent->grant( $admin_id );
+
+		$this->assertTrue( $consent->has_been_granted() );
+		$this->assertSame( 'site-owner', $consent->get_granted_by_login() );
+		$this->assertNotSame( '', $consent->get_granted_at() );
 	}
 }
