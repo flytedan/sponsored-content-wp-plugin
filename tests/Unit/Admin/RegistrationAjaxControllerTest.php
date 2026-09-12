@@ -1,18 +1,18 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Unit\Admin;
+namespace Flytedesk\HostedContent\Tests\Unit\Admin;
 
 use Brain\Monkey\Functions;
-use Flytedesk\SponsoredContent\Admin\RegistrationAjaxController;
-use Flytedesk\SponsoredContent\Registration\Client;
-use Flytedesk\SponsoredContent\Registration\Consent;
-use Flytedesk\SponsoredContent\Registration\StatePresenter;
-use Flytedesk\SponsoredContent\Tests\Unit\BrainMonkeyTestCase;
+use Flytedesk\HostedContent\Admin\RegistrationAjaxController;
+use Flytedesk\HostedContent\Registration\Client;
+use Flytedesk\HostedContent\Registration\Consent;
+use Flytedesk\HostedContent\Registration\StatePresenter;
+use Flytedesk\HostedContent\Tests\Unit\BrainMonkeyTestCase;
 
 final class RegistrationAjaxControllerTest extends BrainMonkeyTestCase {
 

@@ -20,7 +20,7 @@
  * https://make.wordpress.org/cli/handbook/misc/plugin-unit-tests/ and used
  * by `wp scaffold plugin-tests`.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
@@ -54,7 +54,7 @@ if ( file_exists( $wp_tests_dir . '/includes/functions.php' ) ) {
 	tests_add_filter(
 		'muplugins_loaded',
 		static function (): void {
-			require_once dirname( __DIR__ ) . '/sponsored-content-wp-plugin.php';
+			require_once dirname( __DIR__ ) . '/hosted-content-wp-plugin.php';
 		}
 	);
 

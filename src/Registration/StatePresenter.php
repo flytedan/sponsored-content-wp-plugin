@@ -3,12 +3,12 @@
  * Assembles the full registration state for display - used by both the
  * initial page render and the AJAX endpoints that back its live updates.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

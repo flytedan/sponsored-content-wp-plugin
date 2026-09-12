@@ -2,12 +2,12 @@
 /**
  * Base test case for the Brain Monkey-backed unit suite.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Unit;
+namespace Flytedesk\HostedContent\Tests\Unit;
 
 use Brain\Monkey;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;

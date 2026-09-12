@@ -3,12 +3,12 @@
  * Tracks whether flytedesk has ever successfully exercised each CRUD
  * operation against this site's REST API.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Backs the Registration page's "Verified" timeline step. Registration
  * being Accepted only proves a human reviewed the site - it says nothing
  * about whether flytedesk's platform can actually create, update, and
- * delete content here. {@see \Flytedesk\SponsoredContent\Rest\Controller}
+ * delete content here. {@see \Flytedesk\HostedContent\Rest\Controller}
  * calls the relevant mark_*_verified() the moment each operation first
  * succeeds (real or test content - the specific post doesn't matter, only
  * that the operation worked at least once), and this class remembers only

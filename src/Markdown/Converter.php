@@ -2,12 +2,12 @@
 /**
  * Minimal, dependency-free Markdown-to-HTML converter.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Markdown;
+namespace Flytedesk\HostedContent\Markdown;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

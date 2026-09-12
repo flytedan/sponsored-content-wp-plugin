@@ -1,14 +1,14 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Unit;
+namespace Flytedesk\HostedContent\Tests\Unit;
 
 use Brain\Monkey\Functions;
-use Flytedesk\SponsoredContent\Capabilities;
+use Flytedesk\HostedContent\Capabilities;
 
 final class CapabilitiesTest extends BrainMonkeyTestCase {
 
@@ -19,8 +19,8 @@ final class CapabilitiesTest extends BrainMonkeyTestCase {
 			Capabilities::ROLE,
 			\Mockery::type( 'string' ),
 			array(
-				'read'                                 => true,
-				Capabilities::MANAGE_SPONSORED_CONTENT => true,
+				'read'                              => true,
+				Capabilities::MANAGE_HOSTED_CONTENT => true,
 			)
 		);
 

@@ -2,12 +2,12 @@
 /**
  * Narrow interface over WP core's static Application Passwords API.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
 use WP_Error;
 

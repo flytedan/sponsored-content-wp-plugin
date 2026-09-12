@@ -2,12 +2,12 @@
 /**
  * Shared read/write plumbing for the post-meta-backed SEO adapters.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Seo;
+namespace Flytedesk\HostedContent\Seo;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

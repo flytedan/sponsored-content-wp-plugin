@@ -2,12 +2,12 @@
 /**
  * Contract every SEO plugin adapter must implement.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Seo;
+namespace Flytedesk\HostedContent\Seo;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

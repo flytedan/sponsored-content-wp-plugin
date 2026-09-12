@@ -1,17 +1,17 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Integration;
+namespace Flytedesk\HostedContent\Tests\Integration;
 
-use Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage;
-use Flytedesk\SponsoredContent\Registration\Client;
-use Flytedesk\SponsoredContent\Registration\Consent;
-use Flytedesk\SponsoredContent\Seo\AdapterInterface;
-use Flytedesk\SponsoredContent\Seo\Resolver;
+use Flytedesk\HostedContent\Admin\RegistrationSettingsPage;
+use Flytedesk\HostedContent\Registration\Client;
+use Flytedesk\HostedContent\Registration\Consent;
+use Flytedesk\HostedContent\Seo\AdapterInterface;
+use Flytedesk\HostedContent\Seo\Resolver;
 use WP_UnitTestCase;
 
 /**

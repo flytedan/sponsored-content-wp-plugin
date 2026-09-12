@@ -2,12 +2,12 @@
 /**
  * Registers this site with sponsored.flytedesk.com and tracks status.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
 use RuntimeException;
 
@@ -218,7 +218,7 @@ class Client {
 
 	/**
 	 * Removes every option this class stores. Used only by `uninstall.php`
-	 * - never by {@see \Flytedesk\SponsoredContent\Plugin::deactivate()},
+	 * - never by {@see \Flytedesk\HostedContent\Plugin::deactivate()},
 	 * which must leave registration state intact so a deactivate/reactivate
 	 * cycle doesn't lose it.
 	 */
@@ -311,7 +311,7 @@ class Client {
 			self::OPTION_LAST_ERROR,
 			sprintf(
 				/* translators: %d: HTTP status code returned by the registration endpoint. */
-				__( 'Registration endpoint returned HTTP %d.', 'flytedesk-sponsored-content' ),
+				__( 'Registration endpoint returned HTTP %d.', 'flytedesk-hosted-content' ),
 				$code
 			)
 		);

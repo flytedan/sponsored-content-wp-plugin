@@ -1,19 +1,19 @@
 <?php
 /**
- * REST API surface for flytedesk sponsored content.
+ * REST API surface for flytedesk hosted content.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Rest;
+namespace Flytedesk\HostedContent\Rest;
 
-use Flytedesk\SponsoredContent\Capabilities;
-use Flytedesk\SponsoredContent\Markdown\Converter;
-use Flytedesk\SponsoredContent\PostType;
-use Flytedesk\SponsoredContent\Registration\VerificationTracker;
-use Flytedesk\SponsoredContent\Seo\Resolver;
+use Flytedesk\HostedContent\Capabilities;
+use Flytedesk\HostedContent\Markdown\Converter;
+use Flytedesk\HostedContent\PostType;
+use Flytedesk\HostedContent\Registration\VerificationTracker;
+use Flytedesk\HostedContent\Seo\Resolver;
 use WP_Error;
 use WP_HTTP_Response;
 use WP_Post;
@@ -50,7 +50,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * WP_Error/response results - from either step - through
  * `rest_request_after_callbacks` before the response is ever serialized).
  *
- * {@see \Flytedesk\SponsoredContent\Plugin::boot()} registers
+ * {@see \Flytedesk\HostedContent\Plugin::boot()} registers
  * normalize_error_response() as a `rest_request_after_callbacks` filter
  * once, independently of register_routes() below - see that method's
  * docblock for why the two are deliberately decoupled.
@@ -118,7 +118,7 @@ class Controller {
 		if ( ! is_user_logged_in() ) {
 			return new WP_Error(
 				'unauthorized',
-				__( 'Authentication required. Use a WordPress Application Password.', 'flytedesk-sponsored-content' ),
+				__( 'Authentication required. Use a WordPress Application Password.', 'flytedesk-hosted-content' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -126,16 +126,16 @@ class Controller {
 		/*
 		 * `edit_posts` covers the documented manual setup path (a human
 		 * generates their own Application Password from an Author/Editor/
-		 * Administrator account). Capabilities::MANAGE_SPONSORED_CONTENT
+		 * Administrator account). Capabilities::MANAGE_HOSTED_CONTENT
 		 * covers the automatically-provisioned "flytebot" user, which holds
 		 * only that one narrow capability and nothing else - either is
 		 * sufficient, since both represent "this user is meant to manage
-		 * sponsored content", just via different setup paths.
+		 * hosted content", just via different setup paths.
 		 */
-		if ( ! current_user_can( 'edit_posts' ) && ! current_user_can( Capabilities::MANAGE_SPONSORED_CONTENT ) ) {
+		if ( ! current_user_can( 'edit_posts' ) && ! current_user_can( Capabilities::MANAGE_HOSTED_CONTENT ) ) {
 			return new WP_Error(
 				'unauthorized',
-				__( 'The authenticated user does not have permission to manage sponsored content.', 'flytedesk-sponsored-content' ),
+				__( 'The authenticated user does not have permission to manage hosted content.', 'flytedesk-hosted-content' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -260,7 +260,7 @@ class Controller {
 		if ( ! $trashed ) {
 			return new WP_Error(
 				'delete_failed',
-				__( 'The post could not be moved to the trash.', 'flytedesk-sponsored-content' ),
+				__( 'The post could not be moved to the trash.', 'flytedesk-hosted-content' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -271,7 +271,7 @@ class Controller {
 	}
 
 	/**
-	 * Look up a fdsc_sponsored_post by ID, returning a 404 WP_Error when it
+	 * Look up a fdhc_hosted_post by ID, returning a 404 WP_Error when it
 	 * doesn't exist (or exists but is a different post type).
 	 *
 	 * @return WP_Post|WP_Error
@@ -282,7 +282,7 @@ class Controller {
 		if ( ! $post || PostType::POST_TYPE !== $post->post_type ) {
 			return new WP_Error(
 				'not_found',
-				__( 'No sponsored-content post exists with that ID.', 'flytedesk-sponsored-content' ),
+				__( 'No hosted-content post exists with that ID.', 'flytedesk-hosted-content' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -305,7 +305,7 @@ class Controller {
 			if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $decoded ) ) {
 				return new WP_Error(
 					'invalid_json',
-					__( 'Request body must be a valid JSON object.', 'flytedesk-sponsored-content' ),
+					__( 'Request body must be a valid JSON object.', 'flytedesk-hosted-content' ),
 					array( 'status' => 400 )
 				);
 			}
@@ -317,12 +317,12 @@ class Controller {
 
 		$title = isset( $params['title'] ) ? trim( (string) $params['title'] ) : '';
 		if ( '' === $title ) {
-			$errors[] = __( 'title is required.', 'flytedesk-sponsored-content' );
+			$errors[] = __( 'title is required.', 'flytedesk-hosted-content' );
 		}
 
 		$content = isset( $params['content'] ) ? (string) $params['content'] : '';
 		if ( '' === trim( $content ) ) {
-			$errors[] = __( 'content is required.', 'flytedesk-sponsored-content' );
+			$errors[] = __( 'content is required.', 'flytedesk-hosted-content' );
 		}
 
 		$description = isset( $params['description'] ) ? (string) $params['description'] : '';
@@ -330,7 +330,7 @@ class Controller {
 		$seo_raw = array();
 		if ( isset( $params['seo'] ) ) {
 			if ( ! is_array( $params['seo'] ) ) {
-				$errors[] = __( 'seo must be an object.', 'flytedesk-sponsored-content' );
+				$errors[] = __( 'seo must be an object.', 'flytedesk-hosted-content' );
 			} else {
 				$seo_raw = $params['seo'];
 			}
@@ -339,14 +339,14 @@ class Controller {
 		$og_raw = array();
 		if ( isset( $seo_raw['og'] ) ) {
 			if ( ! is_array( $seo_raw['og'] ) ) {
-				$errors[] = __( 'seo.og must be an object.', 'flytedesk-sponsored-content' );
+				$errors[] = __( 'seo.og must be an object.', 'flytedesk-hosted-content' );
 			} else {
 				$og_raw = $seo_raw['og'];
 			}
 		}
 
 		if ( isset( $og_raw['image'] ) && '' !== $og_raw['image'] && false === filter_var( $og_raw['image'], FILTER_VALIDATE_URL ) ) {
-			$errors[] = __( 'seo.og.image must be a valid URL.', 'flytedesk-sponsored-content' );
+			$errors[] = __( 'seo.og.image must be a valid URL.', 'flytedesk-hosted-content' );
 		}
 
 		if ( ! empty( $errors ) ) {

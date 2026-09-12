@@ -1,16 +1,16 @@
-# Flytedesk Sponsored Content
+# Flytedesk Hosted Content
 
-A standalone WordPress plugin that lets the flytedesk platform push sponsored/native articles to a publisher-owned WordPress site via a REST API, with SEO metadata written correctly regardless of which SEO plugin the site runs.
+A standalone WordPress plugin that lets the flytedesk platform push hosted/native articles to a publisher-owned WordPress site via a REST API, with SEO metadata written correctly regardless of which SEO plugin the site runs.
 
 ## Architecture overview
 
 ```
-sponsored-content-wp-plugin.php   Plugin header + Composer autoload + activation/deactivation hooks + Plugin::instance()->boot()
+hosted-content-wp-plugin.php   Plugin header + Composer autoload + activation/deactivation hooks + Plugin::instance()->boot()
 uninstall.php                     Removes all plugin data on delete (see "Notes on uninstall" below)
 src/
 ├── Plugin.php                    Orchestrator: wires everything below to WP hooks; owns activate()/deactivate()
-├── Capabilities.php              The flytedesk_manage_sponsored_content capability + flytedesk_api role
-├── PostType.php                  Registers the fdsc_sponsored_post CPT
+├── Capabilities.php              The flytedesk_manage_hosted_content capability + flytedesk_api role
+├── PostType.php                  Registers the fdhc_hosted_post CPT
 ├── Rest/Controller.php           flytedesk/v1 REST routes, request validation/sanitization, error envelope
 ├── Markdown/Converter.php        Dependency-free markdown -> HTML converter
 ├── Admin/
@@ -46,7 +46,7 @@ src/
 Beyond the REST API itself, the plugin automates onboarding a new publisher site with flytedesk's platform, so a human never has to manually generate and hand over an Application Password. Nothing is sent to sponsored.flytedesk.com automatically on activation - WordPress.org's Plugin Directory guidelines require explicit, informed consent before a plugin contacts an external server, so activating just seeds local state (the verification token below); registration itself only happens after a human explicitly opts in. The flow:
 
 1. **On activation**, the plugin generates a random verification token (`Registration\Client`, 256 bits of entropy, persisted for the life of the install). Nothing is sent anywhere yet.
-2. **A human visits the Registration page** under Sponsored Content in wp-admin, reads a plain-language explanation of exactly what registering will do, and clicks **Connect to flytedesk**. `Registration\Consent` records who clicked it, when, and from what IP - a real audit trail, not just a boolean flag - and `Registration\Client::register()` runs immediately in that same click: it provisions (or reuses) a dedicated, low-privilege WordPress user named `flytebot` (see "The flytebot user" below), issues it a fresh Application Password, and `POST`s everything to `https://sponsored.flytedesk.com/wp-plugin-register`:
+2. **A human visits the Registration page** under Hosted Content in wp-admin, reads a plain-language explanation of exactly what registering will do, and clicks **Connect to flytedesk**. `Registration\Consent` records who clicked it, when, and from what IP - a real audit trail, not just a boolean flag - and `Registration\Client::register()` runs immediately in that same click: it provisions (or reuses) a dedicated, low-privilege WordPress user named `flytebot` (see "The flytebot user" below), issues it a fresh Application Password, and `POST`s everything to `https://sponsored.flytedesk.com/wp-plugin-register`:
    ```json
    {
      "site_title": "...",
@@ -61,11 +61,11 @@ Beyond the REST API itself, the plugin automates onboarding a new publisher site
 4. **sponsored.flytedesk.com confirms the decision** by `POST`ing to `https://{site_domain}/flytedesk-registration-confirmation` with `{"status": "Accepted"}` or `{"status": "Rejected"}`, authenticated via `Authorization: Bearer <the same verification_token from step 2>`. `Registration\ConfirmationController` verifies that token with `hash_equals()` before updating status - **this header is not part of the literal spec's JSON body, and is required**; without it, this endpoint would let anyone who knows a site's domain flip its registration status. `sponsored.flytedesk.com` already has the token from step 2, so sending it back costs nothing on that end.
 5. **Once accepted**, flytedesk's platform uses the `api_username`/`api_key` from step 2 to start calling this plugin's own REST API (the routes documented below) immediately - no further manual credential handoff.
 
-A **Registration** page under **Sponsored Content** in wp-admin shows a **Connect to flytedesk** consent gate before anything is sent, then the current status (Pending / Registration Sent / Accepted / Rejected), the site domain, verification token, and flytebot username, plus a **Re-register** button to re-send the request on demand once already connected - useful after a rejection, or to retry following a transient failure.
+A **Registration** page under **Hosted Content** in wp-admin shows a **Connect to flytedesk** consent gate before anything is sent, then the current status (Pending / Registration Sent / Accepted / Rejected), the site domain, verification token, and flytebot username, plus a **Re-register** button to re-send the request on demand once already connected - useful after a rejection, or to retry following a transient failure.
 
 ### The flytebot user
 
-`Registration\ApiCredential` provisions a single WordPress user, `flytebot`, holding only the `flytedesk_manage_sponsored_content` capability (plus the baseline `read`) via a dedicated `flytedesk_api` role - not `edit_posts` or any other WordPress core capability. This means flytebot can authenticate against *this plugin's* REST routes and nothing else: it cannot log into wp-admin to edit other content, upload media, or use WordPress core's own REST API (`/wp/v2/posts`, etc.). `Rest\Controller::check_permission()` accepts either `edit_posts` (the documented manual-setup path below, for a human-managed Application Password from an Author/Editor/Administrator account) or `flytedesk_manage_sponsored_content` - either is sufficient.
+`Registration\ApiCredential` provisions a single WordPress user, `flytebot`, holding only the `flytedesk_manage_hosted_content` capability (plus the baseline `read`) via a dedicated `flytedesk_api` role - not `edit_posts` or any other WordPress core capability. This means flytebot can authenticate against *this plugin's* REST routes and nothing else: it cannot log into wp-admin to edit other content, upload media, or use WordPress core's own REST API (`/wp/v2/posts`, etc.). `Rest\Controller::check_permission()` accepts either `edit_posts` (the documented manual-setup path below, for a human-managed Application Password from an Author/Editor/Administrator account) or `flytedesk_manage_hosted_content` - either is sufficient.
 
 Every time a registration attempt runs (the initial "Connect to flytedesk" click or a later "Re-register"), a **fresh** Application Password is issued for flytebot and the previously-issued one is revoked. WordPress only ever shows an Application Password's plaintext once, at creation - there's no way to retrieve a previously-issued one later, which is exactly why the plugin reissues rather than trying to cache and resend the same value.
 
@@ -98,7 +98,7 @@ These tests (`tests/Unit/`) use [Brain Monkey](https://brain-wp.github.io/BrainM
 
 ```bash
 npx wp-env start
-npx wp-env run tests-cli --env-cwd=wp-content/plugins/sponsored-content-wp-plugin composer run test:integration
+npx wp-env run tests-cli --env-cwd=wp-content/plugins/hosted-content-wp-plugin composer run test:integration
 ```
 
 [`@wordpress/env`](https://www.npmjs.com/package/@wordpress/env) spins up WordPress + MySQL in Docker (config: `.wp-env.json`) and maps this plugin into it. The `tests-cli` container it creates has `WP_TESTS_DIR` pointed at WordPress core's own bundled PHPUnit test suite; `tests/bootstrap.php` detects that environment variable and boots the real thing - `WP_Test_REST_TestCase`, `wp_insert_post()`, actual REST route dispatch - rather than Brain Monkey's mocks. See `tests/Integration/RestControllerTest.php`.
@@ -199,12 +199,12 @@ Every failure response has this shape:
 |---|---|
 | 400 | Validation failure (missing/invalid fields, malformed JSON body) |
 | 401 | Missing/invalid authentication, or the authenticated user lacks `edit_posts` |
-| 404 | No `fdsc_sponsored_post` post exists with the given ID |
+| 404 | No `fdhc_hosted_post` post exists with the given ID |
 | 500 | Unexpected server-side failure (e.g. `wp_insert_post()` failed) |
 
 ### `POST /posts` - create and publish
 
-Creates a new `fdsc_sponsored_post` post, published immediately.
+Creates a new `fdhc_hosted_post` post, published immediately.
 
 ```bash
 curl -X POST 'https://example.com/wp-json/flytedesk/v1/posts' \
@@ -236,7 +236,7 @@ Response `201 Created`:
   "id": 42,
   "title": "5 Tips for Back-to-School Advertising",
   "description": "A quick primer on seasonal ad placements.",
-  "permalink": "https://example.com/sponsored-content/back-to-school-advertising-tips/",
+  "permalink": "https://example.com/hosted-content/back-to-school-advertising-tips/",
   "status": "publish",
   "seo": {
     "meta_title": "5 Back-to-School Advertising Tips | flytedesk",
@@ -271,7 +271,7 @@ Response `200 OK`: same shape as the `POST` response above, reflecting whatever 
 Not found, `404 Not Found`:
 
 ```json
-{ "error": { "code": "not_found", "message": "No sponsored-content post exists with that ID." } }
+{ "error": { "code": "not_found", "message": "No hosted-content post exists with that ID." } }
 ```
 
 ### `PUT /posts/{id}` - full replacement update
@@ -332,8 +332,8 @@ See `SECURITY.md` for how to report a vulnerability.
 ## File structure
 
 ```
-sponsored-content-wp-plugin/
-├── sponsored-content-wp-plugin.php   Plugin bootstrap: headers, Composer autoload, Plugin::instance()->boot()
+hosted-content-wp-plugin/
+├── hosted-content-wp-plugin.php   Plugin bootstrap: headers, Composer autoload, Plugin::instance()->boot()
 ├── composer.json                     PSR-4 autoload + dev tooling (PHPUnit, Brain Monkey, PHPCS/WPCS)
 ├── src/                               See "Architecture overview" above
 ├── tests/
@@ -355,4 +355,4 @@ sponsored-content-wp-plugin/
 
 * **Deactivating** the plugin removes the `flytebot` user and its Application Password (`Plugin::deactivate()`, via `Registration\ApiCredential::delete_user()`) - the same way any other integration's access should be pulled the moment it's turned off. Registration status, the verification token, and the rest of the timeline are left alone, so reactivating re-registers using the same token instead of starting the workflow over.
 * **Deleting** the plugin (via `uninstall.php`) removes everything above plus every `flytedesk_*` option and the `flytedesk_api` role - a clean slate, as if the plugin had never been installed.
-* Neither step removes any `fdsc_sponsored_post` posts - content already published to the site stays in place, per standard WordPress plugin convention. Removing a connector shouldn't silently delete a publisher's live articles.
+* Neither step removes any `fdhc_hosted_post` posts - content already published to the site stays in place, per standard WordPress plugin convention. Removing a connector shouldn't silently delete a publisher's live articles.

@@ -2,12 +2,12 @@
 /**
  * Concrete ApplicationPasswordIssuer backed by WP core's own API.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
 use WP_Application_Passwords;
 use WP_Error;

@@ -2,12 +2,12 @@
 /**
  * SEO adapter for All in One SEO (AIOSEO).
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Seo;
+namespace Flytedesk\HostedContent\Seo;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

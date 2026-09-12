@@ -1,5 +1,5 @@
 /**
- * Flytedesk Sponsored Content — Registration page.
+ * Flytedesk Hosted Content — Registration page.
  *
  * Renders the timeline / status panel / technical details from a single
  * `state` object (the same shape PHP embeds for the first paint and the

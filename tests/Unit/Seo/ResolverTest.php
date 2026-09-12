@@ -1,16 +1,16 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Unit\Seo;
+namespace Flytedesk\HostedContent\Tests\Unit\Seo;
 
-use Flytedesk\SponsoredContent\Seo\AdapterInterface;
-use Flytedesk\SponsoredContent\Seo\FallbackAdapter;
-use Flytedesk\SponsoredContent\Seo\Resolver;
-use Flytedesk\SponsoredContent\Tests\Unit\BrainMonkeyTestCase;
+use Flytedesk\HostedContent\Seo\AdapterInterface;
+use Flytedesk\HostedContent\Seo\FallbackAdapter;
+use Flytedesk\HostedContent\Seo\Resolver;
+use Flytedesk\HostedContent\Tests\Unit\BrainMonkeyTestCase;
 
 final class ResolverTest extends BrainMonkeyTestCase {
 

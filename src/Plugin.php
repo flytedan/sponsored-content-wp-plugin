@@ -2,24 +2,24 @@
 /**
  * Core bootstrap/orchestrator.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent;
+namespace Flytedesk\HostedContent;
 
-use Flytedesk\SponsoredContent\Admin\RegistrationAjaxController;
-use Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage;
-use Flytedesk\SponsoredContent\Registration\ApiCredential as RegistrationApiCredential;
-use Flytedesk\SponsoredContent\Registration\Client as RegistrationClient;
-use Flytedesk\SponsoredContent\Registration\ConfirmationController;
-use Flytedesk\SponsoredContent\Registration\Consent;
-use Flytedesk\SponsoredContent\Registration\StatePresenter;
-use Flytedesk\SponsoredContent\Registration\VerificationTracker;
-use Flytedesk\SponsoredContent\Rest\Controller;
-use Flytedesk\SponsoredContent\Seo\FallbackAdapter;
-use Flytedesk\SponsoredContent\Seo\Resolver;
+use Flytedesk\HostedContent\Admin\RegistrationAjaxController;
+use Flytedesk\HostedContent\Admin\RegistrationSettingsPage;
+use Flytedesk\HostedContent\Registration\ApiCredential as RegistrationApiCredential;
+use Flytedesk\HostedContent\Registration\Client as RegistrationClient;
+use Flytedesk\HostedContent\Registration\ConfirmationController;
+use Flytedesk\HostedContent\Registration\Consent;
+use Flytedesk\HostedContent\Registration\StatePresenter;
+use Flytedesk\HostedContent\Registration\VerificationTracker;
+use Flytedesk\HostedContent\Rest\Controller;
+use Flytedesk\HostedContent\Seo\FallbackAdapter;
+use Flytedesk\HostedContent\Seo\Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -67,8 +67,8 @@ final class Plugin {
 	 * Deliberately does NOT contact sponsored.flytedesk.com or send anything
 	 * anywhere - that only ever happens after a human explicitly clicks
 	 * "Connect to flytedesk" on the Registration page (see
-	 * {@see \Flytedesk\SponsoredContent\Registration\Consent} and
-	 * {@see \Flytedesk\SponsoredContent\Admin\RegistrationAjaxController::handle_grant_consent()}).
+	 * {@see \Flytedesk\HostedContent\Registration\Consent} and
+	 * {@see \Flytedesk\HostedContent\Admin\RegistrationAjaxController::handle_grant_consent()}).
 	 * Activating a plugin is not itself informed consent to transmit this
 	 * site's data to a third party.
 	 *

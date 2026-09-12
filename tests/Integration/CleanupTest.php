@@ -1,18 +1,18 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Integration;
+namespace Flytedesk\HostedContent\Tests\Integration;
 
-use Flytedesk\SponsoredContent\Capabilities;
-use Flytedesk\SponsoredContent\Plugin;
-use Flytedesk\SponsoredContent\Registration\ApiCredential;
-use Flytedesk\SponsoredContent\Registration\Client;
-use Flytedesk\SponsoredContent\Registration\Consent;
-use Flytedesk\SponsoredContent\Registration\VerificationTracker;
+use Flytedesk\HostedContent\Capabilities;
+use Flytedesk\HostedContent\Plugin;
+use Flytedesk\HostedContent\Registration\ApiCredential;
+use Flytedesk\HostedContent\Registration\Client;
+use Flytedesk\HostedContent\Registration\Consent;
+use Flytedesk\HostedContent\Registration\VerificationTracker;
 use WP_UnitTestCase;
 
 /**
@@ -73,7 +73,7 @@ final class CleanupTest extends WP_UnitTestCase {
 		$this->assertTrue( $consent->has_been_granted() );
 
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-			define( 'WP_UNINSTALL_PLUGIN', 'sponsored-content-wp-plugin/sponsored-content-wp-plugin.php' );
+			define( 'WP_UNINSTALL_PLUGIN', 'hosted-content-wp-plugin/hosted-content-wp-plugin.php' );
 		}
 
 		require dirname( __DIR__, 2 ) . '/uninstall.php';

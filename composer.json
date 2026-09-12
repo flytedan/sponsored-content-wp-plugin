@@ -1,6 +1,6 @@
 {
-    "name": "flytedesk/sponsored-content-wp-plugin",
-    "description": "Lets the flytedesk platform push sponsored/native articles to a publisher-owned WordPress site via a REST API, writing correct SEO metadata regardless of which SEO plugin (Yoast, Rank Math, AIOSEO, or none) is active.",
+    "name": "flytedesk/hosted-content-wp-plugin",
+    "description": "Lets the flytedesk platform push hosted/native articles to a publisher-owned WordPress site via a REST API, writing correct SEO metadata regardless of which SEO plugin (Yoast, Rank Math, AIOSEO, or none) is active.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "authors": [
@@ -23,12 +23,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Flytedesk\\SponsoredContent\\": "src/"
+            "Flytedesk\\HostedContent\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Flytedesk\\SponsoredContent\\Tests\\": "tests/"
+            "Flytedesk\\HostedContent\\Tests\\": "tests/"
         }
     },
     "config": {

@@ -3,12 +3,12 @@
  * Records explicit opt-in consent before this site registers with
  * sponsored.flytedesk.com.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -20,13 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * human deliberately clicks, with the consequences plainly explained first -
  * before a plugin may contact an external server; merely installing or
  * activating a plugin is not itself consent for that. {@see
- * \Flytedesk\SponsoredContent\Admin\RegistrationSettingsPage} shows that
+ * \Flytedesk\HostedContent\Admin\RegistrationSettingsPage} shows that
  * plain-language explanation and gates the "Connect" action behind it; this
  * class is only responsible for recording that a human explicitly granted
  * it, and who/when/from-where, once they do.
  *
  * {@see Client::register()} is never called before {@see has_been_granted()}
- * is true - see {@see \Flytedesk\SponsoredContent\Admin\RegistrationAjaxController::handle_grant_consent()}.
+ * is true - see {@see \Flytedesk\HostedContent\Admin\RegistrationAjaxController::handle_grant_consent()}.
  */
 class Consent {
 

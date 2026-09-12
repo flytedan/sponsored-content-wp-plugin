@@ -2,12 +2,12 @@
 /**
  * Picks the single SEO adapter to use for a given site.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Seo;
+namespace Flytedesk\HostedContent\Seo;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

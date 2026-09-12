@@ -1,15 +1,15 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Unit\Seo;
+namespace Flytedesk\HostedContent\Tests\Unit\Seo;
 
 use Brain\Monkey\Functions;
-use Flytedesk\SponsoredContent\Seo\RankMathAdapter;
-use Flytedesk\SponsoredContent\Tests\Unit\BrainMonkeyTestCase;
+use Flytedesk\HostedContent\Seo\RankMathAdapter;
+use Flytedesk\HostedContent\Tests\Unit\BrainMonkeyTestCase;
 
 final class RankMathAdapterTest extends BrainMonkeyTestCase {
 

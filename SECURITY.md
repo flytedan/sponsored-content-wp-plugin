@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Flytedesk Sponsored Content, please report it privately - **do not open a public GitHub issue**.
+If you discover a security vulnerability in Flytedesk Hosted Content, please report it privately - **do not open a public GitHub issue**.
 
 Email **security@flytedesk.com** with:
 

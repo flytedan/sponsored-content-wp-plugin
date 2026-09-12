@@ -1,14 +1,14 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Unit;
+namespace Flytedesk\HostedContent\Tests\Unit;
 
 use Brain\Monkey\Functions;
-use Flytedesk\SponsoredContent\Markdown\Converter;
+use Flytedesk\HostedContent\Markdown\Converter;
 
 /**
  * The converter calls a handful of WordPress escaping/URL helpers

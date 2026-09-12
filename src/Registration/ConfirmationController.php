@@ -2,12 +2,12 @@
 /**
  * Inbound webhook: sponsored.flytedesk.com confirms Accepted/Rejected.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -100,19 +100,19 @@ class ConfirmationController {
 	 */
 	public function handle( string $method, string $token, string $raw_body ): array {
 		if ( 'POST' !== strtoupper( $method ) ) {
-			return $this->error_result( 405, 'method_not_allowed', __( 'Only POST is accepted.', 'flytedesk-sponsored-content' ) );
+			return $this->error_result( 405, 'method_not_allowed', __( 'Only POST is accepted.', 'flytedesk-hosted-content' ) );
 		}
 
 		$expected_token = $this->client->get_token();
 
 		if ( '' === $expected_token || '' === $token || ! hash_equals( $expected_token, $token ) ) {
-			return $this->error_result( 401, 'unauthorized', __( 'Invalid or missing verification token.', 'flytedesk-sponsored-content' ) );
+			return $this->error_result( 401, 'unauthorized', __( 'Invalid or missing verification token.', 'flytedesk-hosted-content' ) );
 		}
 
 		$data = json_decode( $raw_body, true );
 
 		if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $data ) ) {
-			return $this->error_result( 400, 'invalid_json', __( 'Request body must be a valid JSON object.', 'flytedesk-sponsored-content' ) );
+			return $this->error_result( 400, 'invalid_json', __( 'Request body must be a valid JSON object.', 'flytedesk-hosted-content' ) );
 		}
 
 		$requested_status = isset( $data['status'] ) ? (string) $data['status'] : '';
@@ -132,7 +132,7 @@ class ConfirmationController {
 		);
 
 		if ( ! isset( $status_map[ $requested_status ] ) ) {
-			return $this->error_result( 400, 'invalid_status', __( 'status must be "Accepted", "Rejected", or "ping".', 'flytedesk-sponsored-content' ) );
+			return $this->error_result( 400, 'invalid_status', __( 'status must be "Accepted", "Rejected", or "ping".', 'flytedesk-hosted-content' ) );
 		}
 
 		$this->client->mark_resolved( $status_map[ $requested_status ] );

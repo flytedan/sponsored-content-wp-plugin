@@ -2,14 +2,14 @@
 /**
  * Provisions the dedicated "flytebot" user and its Application Password.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Registration;
+namespace Flytedesk\HostedContent\Registration;
 
-use Flytedesk\SponsoredContent\Capabilities;
+use Flytedesk\HostedContent\Capabilities;
 use RuntimeException;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Automates what the plugin's README otherwise documents as a manual step:
  * a human creating a WordPress user and generating an Application Password
  * for flytedesk to use. Instead, a single low-privilege "flytebot" user
- * (holding only {@see Capabilities::MANAGE_SPONSORED_CONTENT}, nothing
+ * (holding only {@see Capabilities::MANAGE_HOSTED_CONTENT}, nothing
  * else) is created once and reused; a fresh Application Password is issued
  * for it every time {@see issue()} runs (i.e. every registration attempt,
  * automatic or manual), with the previously-issued one revoked first.
@@ -130,7 +130,7 @@ class ApiCredential {
 	 * (e.g. after reactivation) provisions a fresh user rather than
 	 * resolving back to one that no longer exists.
 	 *
-	 * Used by {@see \Flytedesk\SponsoredContent\Plugin::deactivate()} and by
+	 * Used by {@see \Flytedesk\HostedContent\Plugin::deactivate()} and by
 	 * `uninstall.php`. `wp_delete_user()` lives in an admin-only file that
 	 * isn't loaded on every request (e.g. WP-CLI activation/deactivation
 	 * doesn't guarantee it), hence the conditional require.

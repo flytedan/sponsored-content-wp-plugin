@@ -5,12 +5,12 @@
  * guarded by the `WP_UNINSTALL_PLUGIN` constant it defines, without
  * loading the plugin's own bootstrap file first.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent;
+namespace Flytedesk\HostedContent;
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
@@ -25,7 +25,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 /*
  * Removes everything this plugin itself created: the flytebot user and its
  * Application Password, every `flytedesk_*` option, and the `flytedesk_api`
- * role. Deliberately leaves `fdsc_sponsored_post` content in place -
+ * role. Deliberately leaves `fdhc_hosted_post` content in place -
  * uninstalling the connector to sponsored.flytedesk.com should not silently
  * delete a publisher's already-published articles (see README.md's "Notes
  * on uninstall").

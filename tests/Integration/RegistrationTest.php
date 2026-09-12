@@ -1,19 +1,19 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Integration;
+namespace Flytedesk\HostedContent\Tests\Integration;
 
-use Flytedesk\SponsoredContent\Plugin;
-use Flytedesk\SponsoredContent\Registration\ApiCredential;
-use Flytedesk\SponsoredContent\Registration\Client;
-use Flytedesk\SponsoredContent\Registration\ConfirmationController;
-use Flytedesk\SponsoredContent\Registration\Consent;
-use Flytedesk\SponsoredContent\Registration\StatePresenter;
-use Flytedesk\SponsoredContent\Registration\VerificationTracker;
+use Flytedesk\HostedContent\Plugin;
+use Flytedesk\HostedContent\Registration\ApiCredential;
+use Flytedesk\HostedContent\Registration\Client;
+use Flytedesk\HostedContent\Registration\ConfirmationController;
+use Flytedesk\HostedContent\Registration\Consent;
+use Flytedesk\HostedContent\Registration\StatePresenter;
+use Flytedesk\HostedContent\Registration\VerificationTracker;
 use WP_UnitTestCase;
 
 /**
@@ -156,7 +156,7 @@ final class RegistrationTest extends WP_UnitTestCase {
 	 * The two `wp_ajax_*` hooks are what let the Registration page's
 	 * JavaScript poll and (re-)register without a full page reload -
 	 * confirms `Plugin::boot()` actually wires
-	 * {@see \Flytedesk\SponsoredContent\Admin\RegistrationAjaxController}
+	 * {@see \Flytedesk\HostedContent\Admin\RegistrationAjaxController}
 	 * up to them.
 	 */
 	public function test_ajax_actions_are_registered(): void {

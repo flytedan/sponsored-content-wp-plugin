@@ -2,16 +2,16 @@
 /**
  * AJAX endpoints backing the Registration page's live updates.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Admin;
+namespace Flytedesk\HostedContent\Admin;
 
-use Flytedesk\SponsoredContent\Registration\Client;
-use Flytedesk\SponsoredContent\Registration\Consent;
-use Flytedesk\SponsoredContent\Registration\StatePresenter;
+use Flytedesk\HostedContent\Registration\Client;
+use Flytedesk\HostedContent\Registration\Consent;
+use Flytedesk\HostedContent\Registration\StatePresenter;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -96,7 +96,7 @@ class RegistrationAjaxController {
 
 		if ( ! $this->consent->has_been_granted() ) {
 			wp_send_json_error(
-				array( 'message' => __( 'This site has not been authorized to register with flytedesk yet.', 'flytedesk-sponsored-content' ) ),
+				array( 'message' => __( 'This site has not been authorized to register with flytedesk yet.', 'flytedesk-hosted-content' ) ),
 				403
 			);
 
@@ -125,7 +125,7 @@ class RegistrationAjaxController {
 	private function authorize(): bool {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error(
-				array( 'message' => __( 'You do not have permission to do this.', 'flytedesk-sponsored-content' ) ),
+				array( 'message' => __( 'You do not have permission to do this.', 'flytedesk-hosted-content' ) ),
 				403
 			);
 
@@ -134,7 +134,7 @@ class RegistrationAjaxController {
 
 		if ( ! check_ajax_referer( RegistrationSettingsPage::NONCE_ACTION, false, false ) ) {
 			wp_send_json_error(
-				array( 'message' => __( 'Your session has expired. Please reload the page and try again.', 'flytedesk-sponsored-content' ) ),
+				array( 'message' => __( 'Your session has expired. Please reload the page and try again.', 'flytedesk-hosted-content' ) ),
 				403
 			);
 

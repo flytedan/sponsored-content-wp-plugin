@@ -1,17 +1,17 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Unit\Registration;
+namespace Flytedesk\HostedContent\Tests\Unit\Registration;
 
 use Brain\Monkey\Functions;
-use Flytedesk\SponsoredContent\Registration\ApiCredential;
-use Flytedesk\SponsoredContent\Registration\Client;
-use Flytedesk\SponsoredContent\Registration\VerificationTracker;
-use Flytedesk\SponsoredContent\Tests\Unit\BrainMonkeyTestCase;
+use Flytedesk\HostedContent\Registration\ApiCredential;
+use Flytedesk\HostedContent\Registration\Client;
+use Flytedesk\HostedContent\Registration\VerificationTracker;
+use Flytedesk\HostedContent\Tests\Unit\BrainMonkeyTestCase;
 use RuntimeException;
 
 final class ClientTest extends BrainMonkeyTestCase {

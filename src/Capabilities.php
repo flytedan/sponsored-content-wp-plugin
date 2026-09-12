@@ -2,12 +2,12 @@
 /**
  * The custom capability/role the auto-provisioned "flytebot" user gets.
  *
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent;
+namespace Flytedesk\HostedContent;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Capabilities {
 
-	public const MANAGE_SPONSORED_CONTENT = 'flytedesk_manage_sponsored_content';
+	public const MANAGE_HOSTED_CONTENT = 'flytedesk_manage_hosted_content';
 
 	public const ROLE = 'flytedesk_api';
 
@@ -41,10 +41,10 @@ final class Capabilities {
 	public static function register_role(): void {
 		add_role(
 			self::ROLE,
-			__( 'Flytedesk API', 'flytedesk-sponsored-content' ),
+			__( 'Flytedesk API', 'flytedesk-hosted-content' ),
 			array(
-				'read'                         => true,
-				self::MANAGE_SPONSORED_CONTENT => true,
+				'read'                      => true,
+				self::MANAGE_HOSTED_CONTENT => true,
 			)
 		);
 	}

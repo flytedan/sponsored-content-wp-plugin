@@ -1,14 +1,14 @@
 <?php
 /**
- * @package Flytedesk\SponsoredContent
+ * @package Flytedesk\HostedContent
  */
 
 declare( strict_types=1 );
 
-namespace Flytedesk\SponsoredContent\Tests\Integration;
+namespace Flytedesk\HostedContent\Tests\Integration;
 
-use Flytedesk\SponsoredContent\PostType;
-use Flytedesk\SponsoredContent\Registration\VerificationTracker;
+use Flytedesk\HostedContent\PostType;
+use Flytedesk\HostedContent\Registration\VerificationTracker;
 use WP_REST_Request;
 use WP_Test_REST_TestCase;
 
