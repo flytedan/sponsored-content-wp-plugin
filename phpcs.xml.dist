@@ -4,7 +4,7 @@
 
 	<file>src</file>
 	<file>tests</file>
-	<file>hosted-content-wp-plugin.php</file>
+	<file>flytedesk-hosted-content.php</file>
 	<file>uninstall.php</file>
 
 	<exclude-pattern>vendor/*</exclude-pattern>

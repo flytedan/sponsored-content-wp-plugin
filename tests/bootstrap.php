@@ -54,7 +54,7 @@ if ( file_exists( $wp_tests_dir . '/includes/functions.php' ) ) {
 	tests_add_filter(
 		'muplugins_loaded',
 		static function (): void {
-			require_once dirname( __DIR__ ) . '/hosted-content-wp-plugin.php';
+			require_once dirname( __DIR__ ) . '/flytedesk-hosted-content.php';
 		}
 	);
 

@@ -73,7 +73,7 @@ final class CleanupTest extends WP_UnitTestCase {
 		$this->assertTrue( $consent->has_been_granted() );
 
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-			define( 'WP_UNINSTALL_PLUGIN', 'hosted-content-wp-plugin/hosted-content-wp-plugin.php' );
+			define( 'WP_UNINSTALL_PLUGIN', 'flytedesk-hosted-content/flytedesk-hosted-content.php' );
 		}
 
 		require dirname( __DIR__, 2 ) . '/uninstall.php';

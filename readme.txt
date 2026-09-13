@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Publishes flytedesk-managed hosted/native articles to this site via a REST API, with correct SEO metadata regardless of which SEO plugin (if any) is active.
+Publishes flytedesk-managed hosted/native articles via a REST API, with correct SEO metadata regardless of which SEO plugin (if any) is active.
 
 == Description ==
 
@@ -34,7 +34,7 @@ See README.md in the plugin directory for the full field reference and curl exam
 
 == Installation ==
 
-1. Upload the `hosted-content-wp-plugin` directory to `/wp-content/plugins/`.
+1. Upload the `flytedesk-hosted-content` directory to `/wp-content/plugins/`.
 2. From the plugin directory on the server, run `composer install --no-dev` to install its runtime dependencies (there are none beyond the autoloader itself, but this step generates `vendor/autoload.php`, which the plugin requires to boot).
 3. Activate the plugin through the "Plugins" screen in WordPress. WordPress itself will refuse activation with an explanatory notice if the site doesn't meet the "Requires at least" / "Requires PHP" versions declared above.
 4. Visit **Hosted Content → Registration** in wp-admin, review exactly what connecting will do, and click **Connect to flytedesk**. That single click provisions the site's own credentials and sends the registration - nothing is sent anywhere before you take that action.

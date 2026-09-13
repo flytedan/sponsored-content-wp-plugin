@@ -1,5 +1,5 @@
 {
-    "name": "flytedesk/hosted-content-wp-plugin",
+    "name": "flytedesk/flytedesk-hosted-content",
     "description": "Lets the flytedesk platform push hosted/native articles to a publisher-owned WordPress site via a REST API, writing correct SEO metadata regardless of which SEO plugin (Yoast, Rank Math, AIOSEO, or none) is active.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",

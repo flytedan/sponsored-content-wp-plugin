@@ -5,7 +5,7 @@ A standalone WordPress plugin that lets the flytedesk platform push hosted/nativ
 ## Architecture overview
 
 ```
-hosted-content-wp-plugin.php   Plugin header + Composer autoload + activation/deactivation hooks + Plugin::instance()->boot()
+flytedesk-hosted-content.php   Plugin header + Composer autoload + activation/deactivation hooks + Plugin::instance()->boot()
 uninstall.php                     Removes all plugin data on delete (see "Notes on uninstall" below)
 src/
 ├── Plugin.php                    Orchestrator: wires everything below to WP hooks; owns activate()/deactivate()
@@ -332,8 +332,8 @@ See `SECURITY.md` for how to report a vulnerability.
 ## File structure
 
 ```
-hosted-content-wp-plugin/
-├── hosted-content-wp-plugin.php   Plugin bootstrap: headers, Composer autoload, Plugin::instance()->boot()
+flytedesk-hosted-content/
+├── flytedesk-hosted-content.php   Plugin bootstrap: headers, Composer autoload, Plugin::instance()->boot()
 ├── composer.json                     PSR-4 autoload + dev tooling (PHPUnit, Brain Monkey, PHPCS/WPCS)
 ├── src/                               See "Architecture overview" above
 ├── tests/
