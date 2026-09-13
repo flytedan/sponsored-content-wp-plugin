@@ -8,6 +8,7 @@ declare( strict_types=1 );
 namespace Flytedesk\HostedContent\Tests\Integration;
 
 use Flytedesk\HostedContent\Plugin;
+use Flytedesk\HostedContent\PostType;
 use Flytedesk\HostedContent\Registration\ApiCredential;
 use Flytedesk\HostedContent\Registration\Client;
 use Flytedesk\HostedContent\Registration\ConfirmationController;
@@ -150,6 +151,61 @@ final class RegistrationTest extends WP_UnitTestCase {
 		Plugin::activate();
 
 		$this->assertArrayHasKey( '^flytedesk-registration-confirmation/?$', $wp_rewrite->extra_rules_top );
+	}
+
+	/**
+	 * Regression test for the same bug class as the one above, caught by
+	 * real-world testing: a real "Upload Plugin" -> "Activate Plugin" install
+	 * left every single published post's permalink 404ing, because
+	 * `PostType::register()` - hooked to `init` by `Plugin::boot()`, which is
+	 * only ever called once this plugin's bootstrap file is `include_once`'d
+	 * during the activation request itself - runs too late to have added the
+	 * CPT's permalink structure to `$wp_rewrite` before `activate()`'s
+	 * `flush_rewrite_rules()` call compiled the rewrite rules. Fixed the same
+	 * way as the confirmation webhook's rule: `activate()` now registers the
+	 * post type directly, rather than relying on `init` having already done
+	 * it. This test unregisters the post type first (simulating "init never
+	 * ran for it this request") and confirms `activate()` alone is enough to
+	 * produce a compiled rewrite rule for it.
+	 *
+	 * `WP_Rewrite::rewrite_rules()` only ever compiles a real ruleset - and
+	 * therefore only ever persists an array to the `rewrite_rules` option -
+	 * when a permalink structure is set; with the default "Plain" permalinks
+	 * the test install otherwise boots with, it persists an empty string
+	 * instead (WordPress has nothing to rewrite). A publisher hitting this
+	 * 404 bug in the wild necessarily has pretty permalinks enabled, so this
+	 * test sets a permalink structure to reproduce those real conditions,
+	 * restoring the original structure afterwards so it doesn't bleed into
+	 * other tests sharing the same `$wp_rewrite` instance.
+	 */
+	public function test_activate_registers_the_post_types_permalinks_itself(): void {
+		global $wp_rewrite;
+
+		$original_structure = $wp_rewrite->permalink_structure;
+		$wp_rewrite->set_permalink_structure( '/%postname%/' );
+
+		try {
+			unregister_post_type( PostType::POST_TYPE );
+			$this->assertFalse( post_type_exists( PostType::POST_TYPE ) );
+
+			Plugin::activate();
+
+			$this->assertTrue( post_type_exists( PostType::POST_TYPE ) );
+
+			$compiled                = get_option( 'rewrite_rules', array() );
+			$has_hosted_content_rule = false;
+
+			foreach ( array_keys( $compiled ) as $pattern ) {
+				if ( false !== strpos( $pattern, 'hosted-content' ) ) {
+					$has_hosted_content_rule = true;
+					break;
+				}
+			}
+
+			$this->assertTrue( $has_hosted_content_rule, 'Expected activate() to compile a hosted-content permalink rule even when init never registered the post type first.' );
+		} finally {
+			$wp_rewrite->set_permalink_structure( $original_structure );
+		}
 	}
 
 	/**

@@ -59,10 +59,11 @@ final class Plugin {
 	/**
 	 * Runs on plugin activation: seeds the registration option state (token
 	 * + initial "pending" status, generated once and left alone on
-	 * reactivation) and flushes rewrite rules so the
-	 * `/flytedesk-registration-confirmation` route {@see ConfirmationController}
-	 * registers takes effect immediately rather than only after WordPress's
-	 * own periodic flush.
+	 * reactivation) and flushes rewrite rules so both the CPT's own
+	 * permalinks {@see PostType} registers and the
+	 * `/flytedesk-registration-confirmation` route
+	 * {@see ConfirmationController} registers take effect immediately,
+	 * rather than only after WordPress's own periodic flush.
 	 *
 	 * Deliberately does NOT contact sponsored.flytedesk.com or send anything
 	 * anywhere - that only ever happens after a human explicitly clicks
@@ -72,22 +73,28 @@ final class Plugin {
 	 * Activating a plugin is not itself informed consent to transmit this
 	 * site's data to a third party.
 	 *
-	 * `ConfirmationController::add_rewrite_rule()` is called directly here,
-	 * redundantly with its own `init` registration, rather than relying on
-	 * `init` having already fired earlier in the same request by the time
-	 * this runs. That's true for a real, browser-based plugin activation
-	 * (WordPress always fires `init` before dispatching an admin action like
-	 * "activate this plugin"), but isn't guaranteed for every activation
-	 * path - `wp plugin activate` via WP-CLI was observed not to reliably
-	 * fire `init` first, which meant the rule wasn't yet in
-	 * `WP_Rewrite::$extra_rules_top` at the moment this flushed, so the
-	 * compiled rewrite rules ended up missing it entirely (a confirmed 404
-	 * on `/flytedesk-registration-confirmation` until the next unrelated
-	 * flush). Calling it explicitly here makes the flush correct regardless
-	 * of hook-ordering assumptions.
+	 * `PostType::register()` and `ConfirmationController::add_rewrite_rule()`
+	 * are both called directly here, redundantly with their own `init`
+	 * registration in {@see boot()}, rather than relying on `init` having
+	 * already fired earlier in the same request by the time this runs. On
+	 * the *very first* request that activates this plugin, it isn't yet in
+	 * `active_plugins`, so WordPress's normal early plugin-loading loop
+	 * never calls `boot()` for it - `activate_plugin()` only `include_once`s
+	 * this plugin's bootstrap file (which calls `boot()`, hooking `init`)
+	 * partway through handling the *current* admin request, by which point
+	 * the global `init` action has already fired once and will not fire
+	 * again this request. That left the CPT's own rewrite rules - and
+	 * separately, the confirmation webhook's - entirely missing from the
+	 * compiled rewrite rules after activation (a confirmed real-world 404 on
+	 * every single published post's permalink, caught via manual testing of
+	 * a real "Upload Plugin" install). Calling both directly here makes the
+	 * flush correct regardless of hook-ordering assumptions, on every
+	 * activation path - a real browser upload-and-activate, the Plugins list
+	 * page, or `wp plugin activate` via WP-CLI.
 	 */
 	public static function activate(): void {
 		Capabilities::register_role();
+		( new PostType() )->register();
 
 		$client = new RegistrationClient();
 		$client->ensure_initial_state();
