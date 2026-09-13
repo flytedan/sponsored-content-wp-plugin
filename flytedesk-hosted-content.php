@@ -1,7 +1,6 @@
 <?php
 /**
  * Plugin Name:       Flytedesk Hosted Content
- * Plugin URI:        https://flytedesk.com
  * Description:       Publishes flytedesk-managed hosted/native articles to this site via a REST API, writing correct SEO metadata regardless of which SEO plugin (Yoast, Rank Math, All in One SEO) is active - or none at all.
  * Version:           1.0.0
  * Requires at least: 6.5
