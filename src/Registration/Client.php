@@ -9,8 +9,6 @@ declare( strict_types=1 );
 
 namespace Flytedesk\HostedContent\Registration;
 
-use RuntimeException;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -230,11 +228,12 @@ class Client {
 
 	/**
 	 * POSTs this site's registration to sponsored.flytedesk.com, including a
-	 * freshly-issued Application Password for the dedicated "flytebot" user
-	 * (see {@see ApiCredential}) so that, once a human accepts the
-	 * registration on the sponsored.flytedesk.com side, flytedesk's
-	 * platform can start pushing content to this site immediately - no
-	 * separate manual credential handoff.
+	 * freshly-issued flytedesk API key (see {@see ApiCredential}) - entirely
+	 * disconnected from WordPress's own authentication system, not tied to
+	 * any WordPress user - so that, once a human accepts the registration on
+	 * the sponsored.flytedesk.com side, flytedesk's platform can start
+	 * pushing content to this site immediately using that key. No separate
+	 * manual credential handoff.
 	 *
 	 * Records the outcome of every attempt (timestamp, HTTP status, a
 	 * redacted copy of the request, and the raw response body) regardless of
@@ -246,30 +245,20 @@ class Client {
 	 * or "Verified" step from a previous registration attempt against a
 	 * fresh one - a CRUD success from before this attempt was sent proves
 	 * nothing about whether *this* connection actually works.
-	 * Any other outcome (network failure, non-200 response, or failing to
-	 * issue the credential itself) leaves status unchanged and records the
-	 * failure reason - it does not revert an already-`accepted`/`rejected`
-	 * site back to a lesser state just because a later re-registration
-	 * attempt failed.
+	 * Any other outcome (network failure or non-200 response) leaves status
+	 * unchanged and records the failure reason - it does not revert an
+	 * already-`accepted`/`rejected` site back to a lesser state just because
+	 * a later re-registration attempt failed.
 	 */
 	public function register(): void {
 		update_option( self::OPTION_LAST_ATTEMPT_AT, current_time( 'mysql' ) );
 
-		try {
-			$api_username = $this->api_credential->get_username();
-			$api_key      = $this->api_credential->issue();
-		} catch ( RuntimeException $e ) {
-			update_option( self::OPTION_LAST_HTTP_STATUS, 0 );
-			update_option( self::OPTION_LAST_RESPONSE_BODY, '' );
-			update_option( self::OPTION_LAST_ERROR, $e->getMessage() );
-			return;
-		}
+		$api_key = $this->api_credential->issue();
 
 		$request_body = array(
 			'site_title'         => get_bloginfo( 'name' ),
 			'site_domain'        => $this->get_site_domain(),
 			'verification_token' => $this->get_token(),
-			'api_username'       => $api_username,
 			'api_key'            => $api_key,
 		);
 

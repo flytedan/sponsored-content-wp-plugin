@@ -1,6 +1,6 @@
 <?php
 /**
- * Provisions the dedicated "flytebot" user and its Application Password.
+ * Generates and verifies flytedesk's own API key for this site.
  *
  * @package Flytedesk\HostedContent
  */
@@ -9,155 +9,115 @@ declare( strict_types=1 );
 
 namespace Flytedesk\HostedContent\Registration;
 
-use Flytedesk\HostedContent\Capabilities;
-use RuntimeException;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Automates what the plugin's README otherwise documents as a manual step:
- * a human creating a WordPress user and generating an Application Password
- * for flytedesk to use. Instead, a single low-privilege "flytebot" user
- * (holding only {@see Capabilities::MANAGE_HOSTED_CONTENT}, nothing
- * else) is created once and reused; a fresh Application Password is issued
- * for it every time {@see issue()} runs (i.e. every registration attempt,
- * automatic or manual), with the previously-issued one revoked first.
+ * The REST API ({@see \Flytedesk\HostedContent\Rest\Controller}) authenticates
+ * with a key this plugin generates and owns outright - it is not a WordPress
+ * user, not a WordPress Application Password, and {@see \Flytedesk\HostedContent\Rest\Controller::check_permission()}
+ * never touches WordPress's own authentication system (cookies, nonces,
+ * `is_user_logged_in()`, `current_user_can()`) to check it. That keeps this
+ * integration point entirely independent of whatever WordPress accounts,
+ * roles, or capabilities exist on the site - there is nothing for a site
+ * owner to misconfigure on the WordPress side, and nothing for this plugin
+ * to create, reuse, or clean up there either.
  *
- * Application Passwords are only ever visible in plaintext at the moment
- * WordPress creates them - there is no way to retrieve a previously-issued
- * one later, which is exactly why this reissues rather than trying to cache
- * and resend the same value.
+ * Only a SHA-256 hash of the key is ever stored - the same property
+ * WordPress's own Application Passwords have (plaintext is visible exactly
+ * once, at issuance, and never persisted anywhere in recoverable form) - so a
+ * compromised database dump does not itself hand over a usable key.
+ * `hash_equals()` is used to compare an incoming request's key against that
+ * hash, so the comparison doesn't leak timing information about how much of
+ * the key matched.
  */
 class ApiCredential {
 
-	private const USERNAME = 'flytebot';
-
-	public const OPTION_USER_ID       = 'flytedesk_api_user_id';
-	public const OPTION_PASSWORD_UUID = 'flytedesk_api_password_uuid';
-
-	private ApplicationPasswordIssuer $issuer;
-
-	public function __construct( ?ApplicationPasswordIssuer $issuer = null ) {
-		$this->issuer = $issuer ?? new WordPressApplicationPasswordIssuer();
-	}
-
-	public function get_username(): string {
-		return self::USERNAME;
-	}
+	public const OPTION_KEY_HASH  = 'flytedesk_api_key_hash';
+	public const OPTION_ISSUED_AT = 'flytedesk_api_key_issued_at';
 
 	/**
-	 * Ensures the flytebot user exists, revokes whatever Application
-	 * Password was previously issued for it (if any), issues a new one, and
-	 * returns it in plaintext - the only time it will ever be available.
-	 *
-	 * @throws RuntimeException If user creation or password issuance fails.
+	 * Every option this class owns, for `uninstall.php` (and
+	 * {@see \Flytedesk\HostedContent\Plugin::deactivate()}) to remove
+	 * completely via {@see delete_all_data()} - single source of truth so
+	 * that a future option this class adds can't be forgotten there.
+	 */
+	private const ALL_OPTIONS = array(
+		self::OPTION_KEY_HASH,
+		self::OPTION_ISSUED_AT,
+	);
+
+	/**
+	 * Generates a fresh API key, stores only its hash, and returns the
+	 * plaintext value - the only time it will ever be available. Overwrites
+	 * (and immediately invalidates) whatever key was previously issued, the
+	 * same way issuing a fresh Application Password used to revoke the
+	 * previous one: every registration attempt (the initial "Connect to
+	 * flytedesk" click or a later "Re-register") should hand flytedesk's
+	 * platform a key that supersedes whatever it was given before, not
+	 * accumulate indefinitely many valid keys.
 	 */
 	public function issue(): string {
-		$user_id = $this->ensure_user();
+		$key = $this->generate_key();
 
-		$this->revoke_previous( $user_id );
+		update_option( self::OPTION_KEY_HASH, $this->hash( $key ) );
+		update_option( self::OPTION_ISSUED_AT, current_time( 'mysql' ) );
 
-		$result = $this->issuer->create( $user_id, array( 'name' => 'flytedesk-registration' ) );
+		return $key;
+	}
 
-		if ( is_wp_error( $result ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not page output; caught by Client::register(), stored, and esc_html()'d at display time in RegistrationSettingsPage::render().
-			throw new RuntimeException( $result->get_error_message() );
-		}
-
-		list( $password, $item ) = $result;
-
-		update_option( self::OPTION_PASSWORD_UUID, $item['uuid'] );
-
-		return $password;
+	public function get_issued_at(): string {
+		return (string) get_option( self::OPTION_ISSUED_AT, '' );
 	}
 
 	/**
-	 * @throws RuntimeException If the user does not exist and cannot be created.
+	 * Timing-safe comparison against the currently stored key's hash.
+	 * Returns false (rather than throwing) for an empty or never-issued key,
+	 * so a REST request arriving before any registration attempt has ever
+	 * run is simply unauthenticated, not a fatal error.
 	 */
-	private function ensure_user(): int {
-		$tracked_id = (int) get_option( self::OPTION_USER_ID, 0 );
-
-		if ( $tracked_id > 0 && false !== get_user_by( 'id', $tracked_id ) ) {
-			return $tracked_id;
+	public function verify( string $provided_key ): bool {
+		if ( '' === $provided_key ) {
+			return false;
 		}
 
-		$existing = get_user_by( 'login', self::USERNAME );
+		$stored_hash = (string) get_option( self::OPTION_KEY_HASH, '' );
 
-		if ( false !== $existing ) {
-			update_option( self::OPTION_USER_ID, $existing->ID );
-
-			return $existing->ID;
+		if ( '' === $stored_hash ) {
+			return false;
 		}
 
-		$user_id = wp_insert_user(
-			array(
-				'user_login'   => self::USERNAME,
-				'user_pass'    => wp_generate_password( 64, true, true ),
-				'user_email'   => self::USERNAME . '@' . $this->site_domain() . '.invalid',
-				'display_name' => 'Flytebot (Flytedesk API)',
-				'role'         => Capabilities::ROLE,
-			)
-		);
-
-		if ( is_wp_error( $user_id ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not page output; caught by Client::register(), stored, and esc_html()'d at display time in RegistrationSettingsPage::render().
-			throw new RuntimeException( $user_id->get_error_message() );
-		}
-
-		update_option( self::OPTION_USER_ID, $user_id );
-
-		return $user_id;
-	}
-
-	private function revoke_previous( int $user_id ): void {
-		$uuid = (string) get_option( self::OPTION_PASSWORD_UUID, '' );
-
-		if ( '' === $uuid ) {
-			return;
-		}
-
-		$this->issuer->delete( $user_id, $uuid );
-		delete_option( self::OPTION_PASSWORD_UUID );
+		return hash_equals( $stored_hash, $this->hash( $provided_key ) );
 	}
 
 	/**
-	 * Removes the flytebot user this class provisioned (its Application
-	 * Passwords go with it - they live as user meta, not a separate table -
-	 * so there is nothing left to revoke independently) and forgets the
-	 * tracked user/password-uuid options, so a later {@see issue()} call
-	 * (e.g. after reactivation) provisions a fresh user rather than
-	 * resolving back to one that no longer exists.
-	 *
-	 * Used by {@see \Flytedesk\HostedContent\Plugin::deactivate()} and by
-	 * `uninstall.php`. `wp_delete_user()` lives in an admin-only file that
-	 * isn't loaded on every request (e.g. WP-CLI activation/deactivation
-	 * doesn't guarantee it), hence the conditional require.
+	 * Removes every option this class stores. Used by both
+	 * {@see \Flytedesk\HostedContent\Plugin::deactivate()} - revoking access
+	 * the moment the integration is turned off, the same way any other
+	 * integration's access should be pulled - and `uninstall.php`. Unlike
+	 * the WordPress-user-based design this replaced, there is no user to
+	 * delete: clearing the stored hash alone is enough to make the
+	 * previously-issued key permanently unusable, since {@see verify()} has
+	 * nothing left to compare it against.
 	 */
-	public function delete_user(): void {
-		if ( ! function_exists( 'wp_delete_user' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/user.php';
+	public function delete_all_data(): void {
+		foreach ( self::ALL_OPTIONS as $option ) {
+			delete_option( $option );
 		}
-
-		$user_id = (int) get_option( self::OPTION_USER_ID, 0 );
-
-		if ( $user_id > 0 ) {
-			wp_delete_user( $user_id );
-		}
-
-		delete_option( self::OPTION_USER_ID );
-		delete_option( self::OPTION_PASSWORD_UUID );
 	}
 
 	/**
-	 * `.invalid` is the IANA-reserved TLD (RFC 2606) for addresses that are
-	 * guaranteed not to resolve - used here so WordPress never has reason to
-	 * try emailing this synthetic account, on this domain or any other.
+	 * 256 bits of CSPRNG entropy, rendered as 64 hex characters - the same
+	 * construction {@see Client::generate_token()} uses for the verification
+	 * token, since both are machine-to-machine shared secrets rather than
+	 * human-typed passwords.
 	 */
-	private function site_domain(): string {
-		$host = wp_parse_url( home_url(), PHP_URL_HOST );
+	private function generate_key(): string {
+		return bin2hex( random_bytes( 32 ) );
+	}
 
-		return is_string( $host ) && '' !== $host ? $host : 'example';
+	private function hash( string $key ): string {
+		return hash( 'sha256', $key );
 	}
 }

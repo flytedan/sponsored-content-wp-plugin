@@ -229,8 +229,7 @@ class RegistrationSettingsPage {
 				<h2><?php esc_html_e( 'Connect this site to flytedesk', 'flytedesk-hosted-content' ); ?></h2>
 				<p><?php esc_html_e( 'Before this site can receive hosted content, it needs to register with flytedesk\'s platform. Clicking "Connect to flytedesk" below will:', 'flytedesk-hosted-content' ); ?></p>
 				<ul class="flytedesk-consent-list">
-					<li><?php esc_html_e( 'Create a dedicated, low-privilege WordPress user ("flytebot") on this site, used only by this plugin\'s own REST API - nothing else on this site.', 'flytedesk-hosted-content' ); ?></li>
-					<li><?php esc_html_e( 'Issue that user an Application Password and send it, along with this site\'s domain and title, to sponsored.flytedesk.com.', 'flytedesk-hosted-content' ); ?></li>
+					<li><?php esc_html_e( 'Generate a unique API key for this site - not tied to any WordPress user account - and send it, along with this site\'s domain and title, to sponsored.flytedesk.com.', 'flytedesk-hosted-content' ); ?></li>
 					<li><?php esc_html_e( 'Let a human at flytedesk review this registration - nothing is published to this site unless and until they approve it.', 'flytedesk-hosted-content' ); ?></li>
 				</ul>
 				<p class="flytedesk-field-description"><?php esc_html_e( 'Nothing is sent anywhere, and no user is created, until you click the button below. Who clicked it and when is recorded on this site for your own records.', 'flytedesk-hosted-content' ); ?></p>
@@ -365,10 +364,10 @@ class RegistrationSettingsPage {
 				<div class="flytedesk-field-label"><?php esc_html_e( 'Verification token', 'flytedesk-hosted-content' ); ?></div>
 				<div class="flytedesk-field-value"><code data-field="verification_token"><?php echo esc_html( $state['verification_token'] ); ?></code></div>
 
-				<div class="flytedesk-field-label"><?php esc_html_e( 'API user', 'flytedesk-hosted-content' ); ?></div>
+				<div class="flytedesk-field-label"><?php esc_html_e( 'API key issued', 'flytedesk-hosted-content' ); ?></div>
 				<div class="flytedesk-field-value">
-					<code data-field="api_username"><?php echo esc_html( $state['api_username'] ); ?></code>
-					<p class="flytedesk-field-description"><?php esc_html_e( 'A dedicated, low-privilege user this plugin creates automatically to hold the Application Password sent with each registration - it can only use this plugin\'s own REST API, nothing else on this site.', 'flytedesk-hosted-content' ); ?></p>
+					<code data-field="api_key_issued_at"><?php echo esc_html( $state['api_key_issued_at'] ); ?></code>
+					<p class="flytedesk-field-description"><?php esc_html_e( 'A unique key generated for this site alone, unrelated to any WordPress user account - it authenticates only this plugin\'s own REST API, nothing else on this site.', 'flytedesk-hosted-content' ); ?></p>
 				</div>
 			</div>
 
@@ -406,7 +405,7 @@ class RegistrationSettingsPage {
 			<div class="flytedesk-tech-block">
 				<h3><?php esc_html_e( 'Request sent', 'flytedesk-hosted-content' ); ?></h3>
 				<pre class="flytedesk-code-block" data-field="last_request"></pre>
-				<p class="flytedesk-field-description"><?php esc_html_e( 'The Application Password itself is never shown here or stored anywhere after being sent - WordPress only reveals it once, at creation.', 'flytedesk-hosted-content' ); ?></p>
+				<p class="flytedesk-field-description"><?php esc_html_e( 'The API key itself is never shown here or stored in plaintext after being sent - only a hash is kept, to verify future requests without being able to recover the key.', 'flytedesk-hosted-content' ); ?></p>
 			</div>
 		</div>
 		<?php

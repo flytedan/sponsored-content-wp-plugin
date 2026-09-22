@@ -9,7 +9,6 @@ flytedesk-hosted-content.php   Plugin header + Composer autoload + activation/de
 uninstall.php                     Removes all plugin data on delete (see "Notes on uninstall" below)
 src/
 ├── Plugin.php                    Orchestrator: wires everything below to WP hooks; owns activate()/deactivate()
-├── Capabilities.php              The flytedesk_manage_hosted_content capability + flytedesk_api role
 ├── PostType.php                  Registers the fdhc_hosted_post CPT
 ├── Rest/Controller.php           flytedesk/v1 REST routes, request validation/sanitization, error envelope
 ├── Markdown/Converter.php        Dependency-free markdown -> HTML converter
@@ -20,9 +19,7 @@ src/
 │   ├── Client.php                     POSTs registration to sponsored.flytedesk.com, tracks status
 │   ├── Consent.php                    Records the explicit opt-in that gates ever calling Client::register()
 │   ├── ConfirmationController.php     Handles the inbound /flytedesk-registration-confirmation webhook
-│   ├── ApiCredential.php              Provisions the "flytebot" user + issues its Application Password
-│   ├── ApplicationPasswordIssuer.php  Narrow interface over WP_Application_Passwords (for testability)
-│   ├── WordPressApplicationPasswordIssuer.php   Concrete implementation, backed by WP core
+│   ├── ApiCredential.php              Generates flytedesk's own API key; stores only its hash
 │   ├── VerificationTracker.php        Tracks real Create/Update/Delete successes for the "Verified" step
 │   └── StatePresenter.php             Assembles the full registration state shown by the settings page/AJAX
 └── Seo/
@@ -43,31 +40,30 @@ src/
 
 ## Registration with sponsored.flytedesk.com
 
-Beyond the REST API itself, the plugin automates onboarding a new publisher site with flytedesk's platform, so a human never has to manually generate and hand over an Application Password. Nothing is sent to sponsored.flytedesk.com automatically on activation - WordPress.org's Plugin Directory guidelines require explicit, informed consent before a plugin contacts an external server, so activating just seeds local state (the verification token below); registration itself only happens after a human explicitly opts in. The flow:
+Beyond the REST API itself, the plugin automates onboarding a new publisher site with flytedesk's platform, so a human never has to manually generate and hand over a credential. Nothing is sent to sponsored.flytedesk.com automatically on activation - WordPress.org's Plugin Directory guidelines require explicit, informed consent before a plugin contacts an external server, so activating just seeds local state (the verification token below); registration itself only happens after a human explicitly opts in. The flow:
 
 1. **On activation**, the plugin generates a random verification token (`Registration\Client`, 256 bits of entropy, persisted for the life of the install). Nothing is sent anywhere yet.
-2. **A human visits the Registration page** under Hosted Content in wp-admin, reads a plain-language explanation of exactly what registering will do, and clicks **Connect to flytedesk**. `Registration\Consent` records who clicked it, when, and from what IP - a real audit trail, not just a boolean flag - and `Registration\Client::register()` runs immediately in that same click: it provisions (or reuses) a dedicated, low-privilege WordPress user named `flytebot` (see "The flytebot user" below), issues it a fresh Application Password, and `POST`s everything to `https://sponsored.flytedesk.com/wp-plugin-register`:
+2. **A human visits the Registration page** under Hosted Content in wp-admin, reads a plain-language explanation of exactly what registering will do, and clicks **Connect to flytedesk**. `Registration\Consent` records who clicked it, when, and from what IP - a real audit trail, not just a boolean flag - and `Registration\Client::register()` runs immediately in that same click: it generates a fresh flytedesk API key (see "The flytedesk API key" below) and `POST`s everything to `https://sponsored.flytedesk.com/wp-plugin-register`:
    ```json
    {
      "site_title": "...",
      "site_domain": "publisher-site.com",
      "verification_token": "<64 hex chars>",
-     "api_username": "flytebot",
-     "api_key": "<the just-issued Application Password, plaintext>"
+     "api_key": "<the just-issued flytedesk API key, plaintext>"
    }
    ```
-   Status becomes **Registration Sent** only on an HTTP `200` response from that endpoint; anything else (network failure, non-200, or failing to provision the credential) leaves status unchanged and records the failure as "Last error" on the settings page.
+   Status becomes **Registration Sent** only on an HTTP `200` response from that endpoint; anything else (network failure or non-200) leaves status unchanged and records the failure as "Last error" on the settings page.
 3. **A human at flytedesk reviews the registration** and either accepts or rejects it.
 4. **sponsored.flytedesk.com confirms the decision** by `POST`ing to `https://{site_domain}/flytedesk-registration-confirmation` with `{"status": "Accepted"}` or `{"status": "Rejected"}`, authenticated via `Authorization: Bearer <the same verification_token from step 2>`. `Registration\ConfirmationController` verifies that token with `hash_equals()` before updating status - **this header is not part of the literal spec's JSON body, and is required**; without it, this endpoint would let anyone who knows a site's domain flip its registration status. `sponsored.flytedesk.com` already has the token from step 2, so sending it back costs nothing on that end.
-5. **Once accepted**, flytedesk's platform uses the `api_username`/`api_key` from step 2 to start calling this plugin's own REST API (the routes documented below) immediately - no further manual credential handoff.
+5. **Once accepted**, flytedesk's platform uses the `api_key` from step 2 to start calling this plugin's own REST API (the routes documented below) immediately - no further manual credential handoff.
 
-A **Registration** page under **Hosted Content** in wp-admin shows a **Connect to flytedesk** consent gate before anything is sent, then the current status (Pending / Registration Sent / Accepted / Rejected), the site domain, verification token, and flytebot username, plus a **Re-register** button to re-send the request on demand once already connected - useful after a rejection, or to retry following a transient failure.
+A **Registration** page under **Hosted Content** in wp-admin shows a **Connect to flytedesk** consent gate before anything is sent, then the current status (Pending / Registration Sent / Accepted / Rejected), the site domain, verification token, and when the current API key was issued, plus a **Re-register** button to re-send the request on demand once already connected - useful after a rejection, or to retry following a transient failure.
 
-### The flytebot user
+### The flytedesk API key
 
-`Registration\ApiCredential` provisions a single WordPress user, `flytebot`, holding only the `flytedesk_manage_hosted_content` capability (plus the baseline `read`) via a dedicated `flytedesk_api` role - not `edit_posts` or any other WordPress core capability. This means flytebot can authenticate against *this plugin's* REST routes and nothing else: it cannot log into wp-admin to edit other content, upload media, or use WordPress core's own REST API (`/wp/v2/posts`, etc.). `Rest\Controller::check_permission()` accepts either `edit_posts` (the documented manual-setup path below, for a human-managed Application Password from an Author/Editor/Administrator account) or `flytedesk_manage_hosted_content` - either is sufficient.
+`Registration\ApiCredential` generates and owns a single secret this plugin calls its "API key" - 256 bits of CSPRNG entropy, the same construction as the verification token. It is **not** a WordPress user, **not** a WordPress Application Password, and is entirely disconnected from WordPress's own authentication system: no user is created, no role or capability is granted to anyone, and `Rest\Controller::check_permission()` never calls `is_user_logged_in()` or `current_user_can()`. Only a SHA-256 hash of the key is ever stored - the plaintext is visible exactly once, at issuance, the same property WordPress's own Application Passwords have - and an incoming request's key is checked against that hash with `hash_equals()`.
 
-Every time a registration attempt runs (the initial "Connect to flytedesk" click or a later "Re-register"), a **fresh** Application Password is issued for flytebot and the previously-issued one is revoked. WordPress only ever shows an Application Password's plaintext once, at creation - there's no way to retrieve a previously-issued one later, which is exactly why the plugin reissues rather than trying to cache and resend the same value.
+Every time a registration attempt runs (the initial "Connect to flytedesk" click or a later "Re-register"), a **fresh** key is issued and the previously-issued one stops working immediately, since verification has nothing left to compare it against. Deactivating the plugin also revokes the current key outright (`Plugin::deactivate()`), the same way any other integration's access should be pulled the moment it's turned off.
 
 ## Local development setup
 
@@ -111,29 +107,6 @@ To tear the environment down: `npx wp-env destroy`.
 composer run test   # unit, then integration (requires wp-env to already be running for integration)
 ```
 
-## Generating a WordPress Application Password (manual alternative)
-
-The registration flow above handles this automatically via the `flytebot` user - this section only matters if you want to authenticate as a different, human-managed account instead (e.g. for manual testing, or a site that opts out of the registration flow entirely).
-
-Flytedesk authenticates using [WordPress Application Passwords](https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/), a core feature since WordPress 5.6. No custom API-key system is used.
-
-1. In WordPress admin, decide which user flytedesk should authenticate as. That user needs the `edit_posts` capability - an Author, Editor, or Administrator account all qualify. A dedicated "flytedesk" user with the Author role is recommended over reusing a personal account.
-2. Go to **Users → Profile** (or **Users → All Users → [edit that user]** if you're an administrator editing someone else).
-3. Scroll to the **Application Passwords** section near the bottom of the profile screen.
-4. Enter a name for the credential (e.g. `flytedesk`) and click **Add New Application Password**.
-5. WordPress displays the generated password once. Copy it immediately - it cannot be viewed again after leaving the page.
-6. Give flytedesk three things: the site's REST API base URL (`https://example.com/wp-json/`), the WordPress **username** (not email), and the generated application password.
-
-Every request authenticates with an HTTP Basic `Authorization` header:
-
-```
-Authorization: Basic base64("wordpress_username:xxxx xxxx xxxx xxxx xxxx xxxx")
-```
-
-(Application Passwords are generated with spaces for readability; they work with or without the spaces stripped - WordPress normalizes them.)
-
-If a request is unauthenticated or the authenticated user lacks `edit_posts`, every endpoint returns `401`.
-
 ## Markdown conversion
 
 `content` is submitted as Markdown and converted to HTML by `src/Markdown/Converter.php`. See the class doc-comment and the "Why no vendored Markdown library?" note above for the supported subset and rationale. Regardless of what the converter produces, the resulting HTML is always passed through `wp_kses_post()` before being saved - stripping `<script>` tags, inline event handler attributes (`onclick`, etc.), and `javascript:` URLs.
@@ -163,7 +136,7 @@ The post's `post_excerpt` field is set directly by `Rest\Controller` from the re
 
 Base URL: `https://<site>/wp-json/flytedesk/v1`
 
-All endpoints require Application Passwords authentication (`Authorization: Basic ...`) and a user with the `edit_posts` capability.
+All endpoints require the site's flytedesk API key (see "The flytedesk API key" above), sent as `Authorization: Bearer <api key>`. This is entirely independent of WordPress's own authentication system - no WordPress user or capability is involved.
 
 ### Request body shape (POST / PUT)
 
@@ -181,7 +154,7 @@ All endpoints require Application Passwords authentication (`Authorization: Basi
       "title": "string, optional",
       "description": "string, optional",
       "image": "string, optional - absolute URL",
-      "type": "string, optional - e.g. \"article\""
+      "type": "string, optional - defaults to \"article\" when omitted"
     }
   }
 }
@@ -198,7 +171,7 @@ Every failure response has this shape:
 | Status | Meaning |
 |---|---|
 | 400 | Validation failure (missing/invalid fields, malformed JSON body) |
-| 401 | Missing/invalid authentication, or the authenticated user lacks `edit_posts` |
+| 401 | Missing or invalid `Authorization: Bearer <api key>` header |
 | 404 | No `fdhc_hosted_post` post exists with the given ID |
 | 500 | Unexpected server-side failure (e.g. `wp_insert_post()` failed) |
 
@@ -208,7 +181,7 @@ Creates a new `fdhc_hosted_post` post, published immediately.
 
 ```bash
 curl -X POST 'https://example.com/wp-json/flytedesk/v1/posts' \
-  -u 'flytedesk:xxxx xxxx xxxx xxxx xxxx xxxx' \
+  -H 'Authorization: Bearer <api_key>' \
   -H 'Content-Type: application/json' \
   -d '{
         "title": "5 Tips for Back-to-School Advertising",
@@ -263,7 +236,7 @@ Validation failure, `400 Bad Request`:
 
 ```bash
 curl -X GET 'https://example.com/wp-json/flytedesk/v1/posts/42' \
-  -u 'flytedesk:xxxx xxxx xxxx xxxx xxxx xxxx'
+  -H 'Authorization: Bearer <api_key>'
 ```
 
 Response `200 OK`: same shape as the `POST` response above, reflecting whatever is currently stored (including any edits made directly in wp-admin).
@@ -280,7 +253,7 @@ Same body shape as `POST /posts`. This is a full replacement, not a partial patc
 
 ```bash
 curl -X PUT 'https://example.com/wp-json/flytedesk/v1/posts/42' \
-  -u 'flytedesk:xxxx xxxx xxxx xxxx xxxx xxxx' \
+  -H 'Authorization: Bearer <api_key>' \
   -H 'Content-Type: application/json' \
   -d '{
         "title": "5 Tips for Back-to-School Advertising (Updated)",
@@ -308,7 +281,7 @@ Moves the post to the trash (does not permanently delete it).
 
 ```bash
 curl -X DELETE 'https://example.com/wp-json/flytedesk/v1/posts/42' \
-  -u 'flytedesk:xxxx xxxx xxxx xxxx xxxx xxxx'
+  -H 'Authorization: Bearer <api_key>'
 ```
 
 Response: `204 No Content`.
@@ -316,13 +289,13 @@ Response: `204 No Content`.
 Unauthenticated request, `401 Unauthorized`:
 
 ```json
-{ "error": { "code": "unauthorized", "message": "Authentication required. Use a WordPress Application Password." } }
+{ "error": { "code": "unauthorized", "message": "A valid Authorization: Bearer <api key> header is required." } }
 ```
 
 ## Security notes
 
 * Every REST input is sanitized before use: `sanitize_text_field()` (plain text fields), `esc_url_raw()` (URLs), `sanitize_title()` (the requested slug), `wp_kses_post()` (converted Markdown HTML).
-* Authentication is exclusively WordPress Application Passwords; `permission_callback` checks `current_user_can( 'edit_posts' )` - there is no custom API-key scheme to misconfigure.
+* Authentication is a flytedesk-owned API key, entirely disconnected from WordPress's own authentication system - `permission_callback` checks `Authorization: Bearer <api key>` against a stored SHA-256 hash (`hash_equals()`); no WordPress user, capability, cookie, or nonce is ever involved.
 * No raw SQL anywhere - `WP_Query`/`get_post()`, `wp_insert_post()`/`wp_update_post()`, and `get_post_meta()`/`update_post_meta()` are the only data-access surface.
 * `FallbackAdapter::output_head_meta()` runs every value through `esc_attr()`/`esc_url()` before printing it into `wp_head()`.
 * No `eval()`, no `extract()`, no dynamic function calls built from request input, anywhere in the codebase.
@@ -353,6 +326,6 @@ flytedesk-hosted-content/
 
 ## Notes on uninstall
 
-* **Deactivating** the plugin removes the `flytebot` user and its Application Password (`Plugin::deactivate()`, via `Registration\ApiCredential::delete_user()`) - the same way any other integration's access should be pulled the moment it's turned off. Registration status, the verification token, and the rest of the timeline are left alone, so reactivating re-registers using the same token instead of starting the workflow over.
-* **Deleting** the plugin (via `uninstall.php`) removes everything above plus every `flytedesk_*` option and the `flytedesk_api` role - a clean slate, as if the plugin had never been installed.
+* **Deactivating** the plugin revokes the current flytedesk API key (`Plugin::deactivate()`, via `Registration\ApiCredential::delete_all_data()`) - the same way any other integration's access should be pulled the moment it's turned off. Registration status, the verification token, and the rest of the timeline are left alone, so reactivating re-registers using the same token instead of starting the workflow over.
+* **Deleting** the plugin (via `uninstall.php`) removes everything above plus every other `flytedesk_*` option - a clean slate, as if the plugin had never been installed.
 * Neither step removes any `fdhc_hosted_post` posts - content already published to the site stays in place, per standard WordPress plugin convention. Removing a connector shouldn't silently delete a publisher's live articles.

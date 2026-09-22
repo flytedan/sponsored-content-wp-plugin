@@ -43,7 +43,7 @@ class StatePresenter {
 	 *     status: string,
 	 *     site_domain: string,
 	 *     verification_token: string,
-	 *     api_username: string,
+	 *     api_key_issued_at: string,
 	 *     timeline: array{
 	 *         created_at: string,
 	 *         sent_at: string,
@@ -76,7 +76,7 @@ class StatePresenter {
 			'status'             => $this->client->get_status(),
 			'site_domain'        => $this->client->get_site_domain(),
 			'verification_token' => $this->client->get_token(),
-			'api_username'       => $this->api_credential->get_username(),
+			'api_key_issued_at'  => $this->format_timestamp( $this->api_credential->get_issued_at() ),
 			'timeline'           => array(
 				'created_at'       => $this->format_timestamp( $this->client->get_created_at() ),
 				'sent_at'          => $this->format_timestamp( $this->client->get_sent_at() ),

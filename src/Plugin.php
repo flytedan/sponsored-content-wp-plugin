@@ -93,7 +93,6 @@ final class Plugin {
 	 * page, or `wp plugin activate` via WP-CLI.
 	 */
 	public static function activate(): void {
-		Capabilities::register_role();
 		( new PostType() )->register();
 
 		$client = new RegistrationClient();
@@ -104,13 +103,12 @@ final class Plugin {
 	}
 
 	/**
-	 * Removes the low-privilege "flytebot" user {@see RegistrationApiCredential}
-	 * provisioned - deactivating is the natural point to revoke the
-	 * Application Password credential flytedesk's platform was given, the
-	 * same way any other integration's access should be pulled the moment
-	 * it's turned off - and flushes rewrite rules so
-	 * `/flytedesk-registration-confirmation` stops resolving rather than
-	 * 404ing awkwardly through a stale compiled rule.
+	 * Revokes the flytedesk API key {@see RegistrationApiCredential} issued
+	 * - deactivating is the natural point to cut off the credential
+	 * flytedesk's platform was given, the same way any other integration's
+	 * access should be pulled the moment it's turned off - and flushes
+	 * rewrite rules so `/flytedesk-registration-confirmation` stops
+	 * resolving rather than 404ing awkwardly through a stale compiled rule.
 	 *
 	 * Deliberately does not touch registration status/token/timeline
 	 * options ({@see RegistrationClient::delete_all_data()}) - those are
@@ -119,7 +117,7 @@ final class Plugin {
 	 * token instead of starting the workflow over from scratch.
 	 */
 	public static function deactivate(): void {
-		( new RegistrationApiCredential() )->delete_user();
+		( new RegistrationApiCredential() )->delete_all_data();
 
 		flush_rewrite_rules();
 	}
@@ -128,8 +126,8 @@ final class Plugin {
 		$this->post_type                 = new PostType();
 		$this->seo_resolver              = new Resolver();
 		$verification_tracker            = new VerificationTracker();
-		$this->controller                = new Controller( $this->seo_resolver, $verification_tracker );
 		$registration_api_credential     = new RegistrationApiCredential();
+		$this->controller                = new Controller( $this->seo_resolver, $verification_tracker, $registration_api_credential );
 		$this->registration_client       = new RegistrationClient( $registration_api_credential, $verification_tracker );
 		$this->registration_confirmation = new ConfirmationController( $this->registration_client );
 		$consent                         = new Consent();

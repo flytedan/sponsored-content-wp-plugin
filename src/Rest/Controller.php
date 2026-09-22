@@ -9,9 +9,9 @@ declare( strict_types=1 );
 
 namespace Flytedesk\HostedContent\Rest;
 
-use Flytedesk\HostedContent\Capabilities;
 use Flytedesk\HostedContent\Markdown\Converter;
 use Flytedesk\HostedContent\PostType;
+use Flytedesk\HostedContent\Registration\ApiCredential;
 use Flytedesk\HostedContent\Registration\VerificationTracker;
 use Flytedesk\HostedContent\Seo\Resolver;
 use WP_Error;
@@ -33,11 +33,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   PUT    /wp-json/flytedesk/v1/posts/{id}   full replacement update
  *   DELETE /wp-json/flytedesk/v1/posts/{id}   trash
  *
- * Authentication is WordPress Application Passwords (core since 5.6),
- * delivered as `Authorization: Basic base64(username:app_password)`. That
- * header is parsed natively by WP_REST_Server / WP's application-passwords
- * auth handler before permission_callback ever runs - this class only has
- * to check the resulting current user's capability.
+ * Authentication is entirely flytedesk's own: an API key
+ * ({@see \Flytedesk\HostedContent\Registration\ApiCredential}) generated and
+ * owned by this plugin, delivered as `Authorization: Bearer <api key>` and
+ * checked directly against a stored hash in {@see check_permission()}. This
+ * is deliberately disconnected from WordPress's own authentication system -
+ * no WordPress user is created or required, no cookie/nonce/Application
+ * Password machinery is involved, and `current_user_can()` is never called.
+ * A `Bearer` scheme also never collides with core's own Basic-auth-based
+ * Application Passwords handler, so nothing else in WordPress's REST auth
+ * pipeline interferes with or overrides this check.
  *
  * Error responses are always shaped as:
  *   { "error": { "code": "...", "message": "..." } }
@@ -64,9 +69,12 @@ class Controller {
 
 	private VerificationTracker $verification_tracker;
 
-	public function __construct( Resolver $seo_resolver, VerificationTracker $verification_tracker ) {
+	private ApiCredential $api_credential;
+
+	public function __construct( Resolver $seo_resolver, VerificationTracker $verification_tracker, ApiCredential $api_credential ) {
 		$this->seo_resolver         = $seo_resolver;
 		$this->verification_tracker = $verification_tracker;
+		$this->api_credential       = $api_credential;
 	}
 
 	public function register_routes(): void {
@@ -106,41 +114,39 @@ class Controller {
 	}
 
 	/**
-	 * Shared permission gate for every route. Application Passwords
-	 * authentication has already run by the time this executes (it's part
-	 * of WordPress core's REST auth pipeline); we only need to check the
-	 * resulting user's capability.
+	 * Shared permission gate for every route: verifies the request's
+	 * `Authorization: Bearer <api key>` header against
+	 * {@see ApiCredential::verify()}. Entirely independent of WordPress's
+	 * own authentication system - no user, no capability, no nonce is ever
+	 * checked here.
 	 *
 	 * @return true|WP_Error
 	 */
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- $request is required by the WP_REST_Server permission_callback signature; this implementation doesn't need the request body, only the authenticated user set up earlier in the request lifecycle.
 	public function check_permission( WP_REST_Request $request ) {
-		if ( ! is_user_logged_in() ) {
+		if ( ! $this->api_credential->verify( $this->extract_api_key( $request ) ) ) {
 			return new WP_Error(
 				'unauthorized',
-				__( 'Authentication required. Use a WordPress Application Password.', 'flytedesk-hosted-content' ),
-				array( 'status' => 401 )
-			);
-		}
-
-		/*
-		 * `edit_posts` covers the documented manual setup path (a human
-		 * generates their own Application Password from an Author/Editor/
-		 * Administrator account). Capabilities::MANAGE_HOSTED_CONTENT
-		 * covers the automatically-provisioned "flytebot" user, which holds
-		 * only that one narrow capability and nothing else - either is
-		 * sufficient, since both represent "this user is meant to manage
-		 * hosted content", just via different setup paths.
-		 */
-		if ( ! current_user_can( 'edit_posts' ) && ! current_user_can( Capabilities::MANAGE_HOSTED_CONTENT ) ) {
-			return new WP_Error(
-				'unauthorized',
-				__( 'The authenticated user does not have permission to manage hosted content.', 'flytedesk-hosted-content' ),
+				__( 'A valid Authorization: Bearer <api key> header is required.', 'flytedesk-hosted-content' ),
 				array( 'status' => 401 )
 			);
 		}
 
 		return true;
+	}
+
+	/**
+	 * Returns the bearer token from the request's `Authorization` header, or
+	 * an empty string if the header is missing or not in `Bearer <token>`
+	 * form.
+	 */
+	private function extract_api_key( WP_REST_Request $request ): string {
+		$header = (string) $request->get_header( 'authorization' );
+
+		if ( 0 !== stripos( $header, 'Bearer ' ) ) {
+			return '';
+		}
+
+		return trim( substr( $header, strlen( 'Bearer ' ) ) );
 	}
 
 	/**
@@ -369,7 +375,7 @@ class Controller {
 				'title'       => isset( $og_raw['title'] ) ? sanitize_text_field( $og_raw['title'] ) : '',
 				'description' => isset( $og_raw['description'] ) ? sanitize_text_field( $og_raw['description'] ) : '',
 				'image'       => isset( $og_raw['image'] ) ? esc_url_raw( $og_raw['image'] ) : '',
-				'type'        => isset( $og_raw['type'] ) ? sanitize_text_field( $og_raw['type'] ) : '',
+				'type'        => isset( $og_raw['type'] ) && '' !== $og_raw['type'] ? sanitize_text_field( $og_raw['type'] ) : 'article',
 			),
 		);
 

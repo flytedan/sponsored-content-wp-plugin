@@ -7,7 +7,6 @@ declare( strict_types=1 );
 
 namespace Flytedesk\HostedContent\Tests\Integration;
 
-use Flytedesk\HostedContent\Capabilities;
 use Flytedesk\HostedContent\Plugin;
 use Flytedesk\HostedContent\Registration\ApiCredential;
 use Flytedesk\HostedContent\Registration\Client;
@@ -17,15 +16,15 @@ use WP_UnitTestCase;
 
 /**
  * Exercises {@see Plugin::deactivate()} and `uninstall.php` against a real
- * WordPress install - proves the flytebot user, its Application Password,
- * registration options, and the flytedesk_api role are actually removed
- * (or, for deactivate(), deliberately left alone) rather than only
- * asserting the right WP functions were called with the right arguments,
- * which is all the unit suite's Brain Monkey equivalents can prove.
+ * WordPress install - proves the flytedesk API key and registration options
+ * are actually removed (or, for deactivate(), deliberately left alone)
+ * rather than only asserting the right WP functions were called with the
+ * right arguments, which is all the unit suite's Brain Monkey equivalents
+ * can prove.
  */
 final class CleanupTest extends WP_UnitTestCase {
 
-	public function test_deactivate_removes_the_flytebot_user_but_keeps_registration_state(): void {
+	public function test_deactivate_revokes_the_api_key_but_keeps_registration_state(): void {
 		$client = new Client();
 		$client->ensure_initial_state();
 		$token = $client->get_token();
@@ -34,14 +33,15 @@ final class CleanupTest extends WP_UnitTestCase {
 		$consent  = new Consent();
 		$consent->grant( $admin_id );
 
-		( new ApiCredential() )->issue();
-		$this->assertInstanceOf( \WP_User::class, get_user_by( 'login', 'flytebot' ) );
+		$api_credential = new ApiCredential();
+		$key            = $api_credential->issue();
+		$this->assertTrue( $api_credential->verify( $key ) );
 
 		Plugin::deactivate();
 
-		$this->assertFalse( get_user_by( 'login', 'flytebot' ) );
-		$this->assertSame( 0, (int) get_option( ApiCredential::OPTION_USER_ID, 0 ) );
-		$this->assertFalse( get_option( ApiCredential::OPTION_PASSWORD_UUID ) );
+		$this->assertFalse( $api_credential->verify( $key ) );
+		$this->assertFalse( get_option( ApiCredential::OPTION_KEY_HASH ) );
+		$this->assertFalse( get_option( ApiCredential::OPTION_ISSUED_AT ) );
 
 		// Deactivating must not lose registration state - only uninstalling does.
 		$this->assertSame( $token, $client->get_token() );
@@ -52,14 +52,12 @@ final class CleanupTest extends WP_UnitTestCase {
 	}
 
 	public function test_uninstall_removes_every_trace_of_plugin_data(): void {
-		Capabilities::register_role();
-
 		$client = new Client();
 		$client->ensure_initial_state();
 
-		( new ApiCredential() )->issue();
-		$this->assertInstanceOf( \WP_User::class, get_user_by( 'login', 'flytebot' ) );
-		$this->assertNotNull( get_role( Capabilities::ROLE ) );
+		$api_credential = new ApiCredential();
+		$key            = $api_credential->issue();
+		$this->assertTrue( $api_credential->verify( $key ) );
 
 		$verification_tracker = new VerificationTracker();
 		$verification_tracker->mark_create_verified();
@@ -78,13 +76,12 @@ final class CleanupTest extends WP_UnitTestCase {
 
 		require dirname( __DIR__, 2 ) . '/uninstall.php';
 
-		$this->assertFalse( get_user_by( 'login', 'flytebot' ) );
-		$this->assertNull( get_role( Capabilities::ROLE ) );
-		$this->assertFalse( get_option( ApiCredential::OPTION_USER_ID ) );
-		$this->assertFalse( get_option( ApiCredential::OPTION_PASSWORD_UUID ) );
+		$this->assertFalse( $api_credential->verify( $key ) );
 
 		foreach (
 			array(
+				ApiCredential::OPTION_KEY_HASH,
+				ApiCredential::OPTION_ISSUED_AT,
 				Client::OPTION_STATUS,
 				Client::OPTION_TOKEN,
 				Client::OPTION_LAST_ERROR,

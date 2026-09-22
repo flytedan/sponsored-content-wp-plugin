@@ -23,15 +23,14 @@ if ( ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 require_once __DIR__ . '/vendor/autoload.php';
 
 /*
- * Removes everything this plugin itself created: the flytebot user and its
- * Application Password, every `flytedesk_*` option, and the `flytedesk_api`
- * role. Deliberately leaves `fdhc_hosted_post` content in place -
- * uninstalling the connector to sponsored.flytedesk.com should not silently
- * delete a publisher's already-published articles (see README.md's "Notes
- * on uninstall").
+ * Removes everything this plugin itself created: the flytedesk API key
+ * (never tied to any WordPress user), and every other `flytedesk_*` option.
+ * Deliberately leaves `fdhc_hosted_post` content in place - uninstalling the
+ * connector to sponsored.flytedesk.com should not silently delete a
+ * publisher's already-published articles (see README.md's "Notes on
+ * uninstall").
  */
-( new Registration\ApiCredential() )->delete_user();
+( new Registration\ApiCredential() )->delete_all_data();
 ( new Registration\Client() )->delete_all_data();
 ( new Registration\VerificationTracker() )->delete_all_data();
 ( new Registration\Consent() )->delete_all_data();
-Capabilities::remove_role();

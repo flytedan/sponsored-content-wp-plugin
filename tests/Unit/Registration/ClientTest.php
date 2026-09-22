@@ -12,7 +12,6 @@ use Flytedesk\HostedContent\Registration\ApiCredential;
 use Flytedesk\HostedContent\Registration\Client;
 use Flytedesk\HostedContent\Registration\VerificationTracker;
 use Flytedesk\HostedContent\Tests\Unit\BrainMonkeyTestCase;
-use RuntimeException;
 
 final class ClientTest extends BrainMonkeyTestCase {
 
@@ -88,7 +87,7 @@ final class ClientTest extends BrainMonkeyTestCase {
 		Functions\expect( 'wp_json_encode' )->once()->with(
 			\Mockery::on(
 				static function ( $body ): bool {
-					return 'flytebot' === $body['api_username'] && 'freshly-issued-app-password' === $body['api_key'];
+					return 'freshly-issued-api-key' === $body['api_key'];
 				}
 			)
 		)->andReturn( '{}' );
@@ -103,7 +102,7 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$verification_tracker = \Mockery::mock( VerificationTracker::class );
 		$verification_tracker->shouldReceive( 'delete_all_data' )->once();
 
-		( new Client( $this->api_credential_that_issues( 'flytebot', 'freshly-issued-app-password' ), $verification_tracker ) )->register();
+		( new Client( $this->api_credential_that_issues( 'freshly-issued-api-key' ), $verification_tracker ) )->register();
 
 		$this->assertSame( '2026-09-10 12:00:00', $options[ Client::OPTION_LAST_ATTEMPT_AT ] );
 		$this->assertSame( Client::STATUS_SENT, $options[ Client::OPTION_STATUS ] );
@@ -111,7 +110,6 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$this->assertSame( 200, $options[ Client::OPTION_LAST_HTTP_STATUS ] );
 		$this->assertSame( '{"received":true}', $options[ Client::OPTION_LAST_RESPONSE_BODY ] );
 		$this->assertArrayNotHasKey( 'api_key', $options[ Client::OPTION_LAST_REQUEST ] );
-		$this->assertSame( 'flytebot', $options[ Client::OPTION_LAST_REQUEST ]['api_username'] );
 	}
 
 	public function test_register_records_error_and_leaves_status_unchanged_on_non_200(): void {
@@ -130,7 +128,7 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$options = array();
 		$this->capture_update_option( $options );
 
-		( new Client( $this->api_credential_that_issues( 'flytebot', 'some-password' ) ) )->register();
+		( new Client( $this->api_credential_that_issues( 'some-key' ) ) )->register();
 
 		$this->assertArrayNotHasKey( Client::OPTION_STATUS, $options );
 		$this->assertSame( 500, $options[ Client::OPTION_LAST_HTTP_STATUS ] );
@@ -160,7 +158,7 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$verification_tracker = \Mockery::mock( VerificationTracker::class );
 		$verification_tracker->shouldReceive( 'delete_all_data' )->never();
 
-		( new Client( $this->api_credential_that_issues( 'flytebot', 'some-password' ), $verification_tracker ) )->register();
+		( new Client( $this->api_credential_that_issues( 'some-key' ), $verification_tracker ) )->register();
 	}
 
 	public function test_register_records_wp_error_message_on_network_failure(): void {
@@ -182,28 +180,11 @@ final class ClientTest extends BrainMonkeyTestCase {
 		Functions\expect( 'wp_remote_retrieve_response_code' )->never();
 		Functions\expect( 'wp_remote_retrieve_body' )->never();
 
-		( new Client( $this->api_credential_that_issues( 'flytebot', 'some-password' ) ) )->register();
+		( new Client( $this->api_credential_that_issues( 'some-key' ) ) )->register();
 
 		$this->assertSame( 'Connection timed out', $options[ Client::OPTION_LAST_ERROR ] );
 		$this->assertSame( 0, $options[ Client::OPTION_LAST_HTTP_STATUS ] );
 		$this->assertSame( '', $options[ Client::OPTION_LAST_RESPONSE_BODY ] );
-	}
-
-	public function test_register_records_error_and_never_calls_the_endpoint_when_credential_issuance_fails(): void {
-		Functions\when( 'current_time' )->justReturn( '2026-09-10 12:00:00' );
-
-		$api_credential = \Mockery::mock( ApiCredential::class );
-		$api_credential->shouldReceive( 'get_username' )->once()->andReturn( 'flytebot' );
-		$api_credential->shouldReceive( 'issue' )->once()->andThrow( new RuntimeException( 'Could not create the flytebot user.' ) );
-
-		$options = array();
-		$this->capture_update_option( $options );
-		Functions\expect( 'wp_remote_post' )->never();
-
-		( new Client( $api_credential ) )->register();
-
-		$this->assertSame( 'Could not create the flytebot user.', $options[ Client::OPTION_LAST_ERROR ] );
-		$this->assertSame( 0, $options[ Client::OPTION_LAST_HTTP_STATUS ] );
 	}
 
 	public function test_delete_all_data_deletes_every_option_this_class_owns(): void {
@@ -238,10 +219,9 @@ final class ClientTest extends BrainMonkeyTestCase {
 		$this->assertSame( $expected, $deleted );
 	}
 
-	private function api_credential_that_issues( string $username, string $password ): ApiCredential {
+	private function api_credential_that_issues( string $key ): ApiCredential {
 		$api_credential = \Mockery::mock( ApiCredential::class );
-		$api_credential->shouldReceive( 'get_username' )->once()->andReturn( $username );
-		$api_credential->shouldReceive( 'issue' )->once()->andReturn( $password );
+		$api_credential->shouldReceive( 'issue' )->once()->andReturn( $key );
 
 		return $api_credential;
 	}

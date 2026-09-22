@@ -33,7 +33,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$client->shouldReceive( 'get_last_response_body' )->once()->andReturn( 'Internal Server Error' );
 
 		$api_credential = \Mockery::mock( ApiCredential::class );
-		$api_credential->shouldReceive( 'get_username' )->once()->andReturn( 'flytebot' );
+		$api_credential->shouldReceive( 'get_issued_at' )->once()->andReturn( '2026-09-02 10:30:00' );
 
 		$verification_tracker = \Mockery::mock( VerificationTracker::class );
 		$verification_tracker->shouldReceive( 'get_create_verified_at' )->once()->andReturn( '2026-09-02 11:05:00' );
@@ -57,7 +57,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$this->assertSame( Client::STATUS_SENT, $state['status'] );
 		$this->assertSame( 'publisher.example.com', $state['site_domain'] );
 		$this->assertSame( 'the-token', $state['verification_token'] );
-		$this->assertSame( 'flytebot', $state['api_username'] );
+		$this->assertSame( 'formatted(2026-09-02 10:30:00)', $state['api_key_issued_at'] );
 		$this->assertSame( 'formatted(2026-09-01 10:00:00)', $state['timeline']['created_at'] );
 		$this->assertSame( 'formatted(2026-09-02 11:00:00)', $state['timeline']['sent_at'] );
 		$this->assertSame( 'formatted(2026-09-02 11:00:05)', $state['timeline']['ping_received_at'] );
@@ -93,7 +93,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$client->shouldReceive( 'get_last_response_body' )->andReturn( '' );
 
 		$api_credential = \Mockery::mock( ApiCredential::class );
-		$api_credential->shouldReceive( 'get_username' )->andReturn( 'flytebot' );
+		$api_credential->shouldReceive( 'get_issued_at' )->andReturn( '' );
 
 		$verification_tracker = \Mockery::mock( VerificationTracker::class );
 		$verification_tracker->shouldReceive( 'get_create_verified_at' )->andReturn( '' );
@@ -137,7 +137,7 @@ final class StatePresenterTest extends BrainMonkeyTestCase {
 		$client->shouldReceive( 'get_last_response_body' )->andReturn( '' );
 
 		$api_credential = \Mockery::mock( ApiCredential::class );
-		$api_credential->shouldReceive( 'get_username' )->andReturn( 'flytebot' );
+		$api_credential->shouldReceive( 'get_issued_at' )->andReturn( '2026-09-11 08:30:00' );
 
 		$verification_tracker = \Mockery::mock( VerificationTracker::class );
 		$verification_tracker->shouldReceive( 'get_create_verified_at' )->andReturn( '2026-09-11 09:00:00' );

@@ -351,7 +351,7 @@
 
 		setField( els.statusPanel, 'site_domain', state.site_domain );
 		setField( els.statusPanel, 'verification_token', state.verification_token );
-		setField( els.statusPanel, 'api_username', state.api_username );
+		setField( els.statusPanel, 'api_key_issued_at', state.api_key_issued_at );
 
 		var errorBox = els.statusPanel.querySelector( '[data-role="last-error"]' );
 		if ( errorBox ) {
